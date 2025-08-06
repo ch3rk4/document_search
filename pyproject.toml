@@ -8,6 +8,7 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.13"
 djangorestframework = "^3.16.0"
+pytest = "^8.4.1"
 
 
 [build-system]
