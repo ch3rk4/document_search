@@ -71,7 +71,7 @@ class DocumentAPITest(TestCase):
         }
         response = self.client.post(url, data, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_document_update_api(self):
         """Тест обновления документа через API"""

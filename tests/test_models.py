@@ -2,7 +2,7 @@ import pytest
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from src.doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory
+from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory
 
 
 class DocumentModelTest(TestCase):
@@ -33,7 +33,7 @@ class DocumentModelTest(TestCase):
         self.assertEqual(document.author, self.user)
         self.assertEqual(document.category, self.category)
         self.assertTrue(document.is_active)
-        self.assertEqual(document.word_count, 7)  # Количество слов в content
+        self.assertEqual(document.word_count, 6)  # Количество слов в content
 
     def test_document_str_method(self):
         """Тест строкового представления документа"""

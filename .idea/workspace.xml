@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create tests">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-    </list>
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fixes of tests" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,7 +20,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="dev" />
+        <entry key="$PROJECT_DIR$" value="day_1" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -53,8 +49,10 @@
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
     "Python tests.Python tests for test_models.DocumentModelTest.executor": "Run",
+    "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
+    "Python.run_tests.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "day__1"
+    "git-widget-placeholder": "day__2"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -63,7 +61,29 @@
       <recent name="C:\Users\petys\PycharmProjects\document_search\src" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Python.run_tests">
+    <configuration name="run_tests" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="document_search" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/scripts" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/scripts/run_tests.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="Python tests for test_models.DocumentModelTest" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="document_search" />
       <option name="ENV_FILES" value="" />
@@ -79,8 +99,25 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
+    <configuration name="Python tests for tests.test_algorithms.SearchAlgorithmsTest" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="document_search" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;tests.test_algorithms.SearchAlgorithmsTest&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.run_tests" />
+        <item itemvalue="Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest" />
         <item itemvalue="Python tests.Python tests for test_models.DocumentModelTest" />
       </list>
     </recent_temporary>
@@ -197,7 +234,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754467313017</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="fixes">
+      <option name="closed" value="true" />
+      <created>1754470973717</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1754470973717</updated>
+    </task>
+    <task id="LOCAL-00014" summary="fixes of tests">
+      <option name="closed" value="true" />
+      <created>1754481617524</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1754481617525</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -213,6 +266,8 @@
     <MESSAGE value="create migrations" />
     <MESSAGE value="create admin" />
     <MESSAGE value="create tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="create tests" />
+    <MESSAGE value="fixes" />
+    <MESSAGE value="fixes of tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixes of tests" />
   </component>
 </project>
