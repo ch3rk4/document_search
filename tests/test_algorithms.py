@@ -1,8 +1,8 @@
 import pytest
 from django.test import TestCase
 from django.contrib.auth.models import User
-from src.doc_storage.models import Document, DocumentCategory
-from src.search_service.algorithms import SearchAlgorithms, SearchService
+from .doc_storage.models import Document, DocumentCategory
+from .search_service.algorithms import SearchAlgorithms, SearchService
 
 
 class SearchAlgorithmsTest(TestCase):
