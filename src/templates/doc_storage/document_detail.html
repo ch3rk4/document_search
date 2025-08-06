@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ document.title }} - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h1>{{ document.title }}</h1>
+                <div class="document-meta">
+                    <small class="text-muted">
+                        <i class="fas fa-user"></i> {{ document.author.get_full_name|default:document.author.username }} |
+                        <i class="fas fa-calendar"></i> {{ document.created_at|date:"d.m.Y H:i" }} |
+                        <i class="fas fa-edit"></i> Обновлено: {{ document.updated_at|date:"d.m.Y H:i" }}
+                    </small>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="document-content">
+                    {{ document.content|linebreaks }}
+                </div>
+                
+                {% if document.file_path %}
+                    <div class="mt-3">
+                        <h6>Вложенный файл:</h6>
+                        <a href="{{ document.file_path.url }}" class="btn btn-outline-primary" download>
+                            <i class="fas fa-download"></i> Скачать файл
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <div class="row">
+                    <div class="col-sm-6">
+                        {% if document.category %}
+                            <span class="badge bg-primary me-2">{{ document.category.name }}</span>
+                        {% endif %}
+                        <span class="badge bg-info">{{ document.word_count }} слов</span>
+                    </div>
+                    <div class="col-sm-6 text-end">
+                        <!-- Теги -->
+                        {% for tag_relation in document_tags %}
+                            <span class="badge tag" style="background-color: {{ tag_relation.tag.color }};">
+                                {{ tag_relation.tag.name }}
+                            </span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <!-- Похожие документы -->
+        {% if similar_documents %}
+            <div class="card">
+                <div class="card-header">
+                    <h5>Похожие документы</h5>
+                </div>
+                <div class="card-body">
+                    {% for similar_doc in similar_documents %}
+                        <div class="mb-2">
+                            <a href="{% url 'doc_storage:document_detail' similar_doc.pk %}" class="text-decoration-none">
+                                <strong>{{ similar_doc.title }}</strong>
+                            </a>
+                            <br>
+                            <small class="text-muted">
+                                {{ similar_doc.content|truncatewords:15 }}
+                            </small>
+                        </div>
+                        {% if not forloop.last %}<hr>{% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        
+        <!-- Информация о документе -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Информация</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li><strong>Автор:</strong> {{ document.author.get_full_name|default:document.author.username }}</li>
+                    <li><strong>Категория:</strong> {{ document.category.name|default:"Без категории" }}</li>
+                    <li><strong>Создано:</strong> {{ document.created_at|date:"d.m.Y H:i" }}</li>
+                    <li><strong>Обновлено:</strong> {{ document.updated_at|date:"d.m.Y H:i" }}</li>
+                    <li><strong>Слов:</strong> {{ document.word_count }}</li>
+                    <li><strong>Статус:</strong> 
+                        {% if document.is_active %}
+                            <span class="badge bg-success">Активен</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Неактивен</span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
