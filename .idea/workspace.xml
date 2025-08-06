@@ -1,15 +1,46 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="" />
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create tests">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/poetry.lock" beforeDir="false" afterPath="$PROJECT_DIR$/poetry.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="dev" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "ch3rk4"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/ch3rk4/document_search.git",
+    "accountId": "6f96d88e-1535-4788-810a-49b80da077ca"
+  }
+}]]></component>
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 4
 }]]></component>
@@ -21,10 +52,39 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Python tests.Python tests for test_models.DocumentModelTest.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "main"
+    "git-widget-placeholder": "day__1"
   }
 }]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\petys\PycharmProjects\document_search" />
+      <recent name="C:\Users\petys\PycharmProjects\document_search\src" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="Python tests for test_models.DocumentModelTest" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="document_search" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_models.DocumentModelTest&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.Python tests for test_models.DocumentModelTest" />
+      </list>
+    </recent_temporary>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -41,6 +101,118 @@
       <option name="presentableId" value="Default" />
       <updated>1754462533061</updated>
     </task>
+    <task id="LOCAL-00001" summary="start">
+      <option name="closed" value="true" />
+      <created>1754462643159</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1754462643160</updated>
+    </task>
+    <task id="LOCAL-00002" summary="create gitignore">
+      <option name="closed" value="true" />
+      <created>1754462842351</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1754462842352</updated>
+    </task>
+    <task id="LOCAL-00003" summary="create requirements.txt">
+      <option name="closed" value="true" />
+      <created>1754463448097</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1754463448097</updated>
+    </task>
+    <task id="LOCAL-00004" summary="create django proj">
+      <option name="closed" value="true" />
+      <created>1754463512278</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1754463512278</updated>
+    </task>
+    <task id="LOCAL-00005" summary="create django apps">
+      <option name="closed" value="true" />
+      <created>1754464514411</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1754464514411</updated>
+    </task>
+    <task id="LOCAL-00006" summary="create algorithms of search">
+      <option name="closed" value="true" />
+      <created>1754464578585</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1754464578585</updated>
+    </task>
+    <task id="LOCAL-00007" summary="create serializers">
+      <option name="closed" value="true" />
+      <created>1754465098526</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1754465098527</updated>
+    </task>
+    <task id="LOCAL-00008" summary="create views">
+      <option name="closed" value="true" />
+      <created>1754465127149</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1754465127149</updated>
+    </task>
+    <task id="LOCAL-00009" summary="create urls">
+      <option name="closed" value="true" />
+      <created>1754465188158</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1754465188158</updated>
+    </task>
+    <task id="LOCAL-00010" summary="create migrations">
+      <option name="closed" value="true" />
+      <created>1754466961184</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1754466961185</updated>
+    </task>
+    <task id="LOCAL-00011" summary="create admin">
+      <option name="closed" value="true" />
+      <created>1754466994634</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1754466994634</updated>
+    </task>
+    <task id="LOCAL-00012" summary="create tests">
+      <option name="closed" value="true" />
+      <created>1754467313017</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1754467313017</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="start" />
+    <MESSAGE value="create gitignore" />
+    <MESSAGE value="create requirements.txt" />
+    <MESSAGE value="create django proj" />
+    <MESSAGE value="create django apps" />
+    <MESSAGE value="create algorithms of search" />
+    <MESSAGE value="create serializers" />
+    <MESSAGE value="create views" />
+    <MESSAGE value="create urls" />
+    <MESSAGE value="create migrations" />
+    <MESSAGE value="create admin" />
+    <MESSAGE value="create tests" />
+    <option name="LAST_COMMIT_MESSAGE" value="create tests" />
   </component>
 </project>
