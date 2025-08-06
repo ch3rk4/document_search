@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create urls">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/document_search/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/settings.py" afterDir="false" />
-    </list>
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create migrations" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -149,7 +146,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754465188158</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="create migrations">
+      <option name="closed" value="true" />
+      <created>1754466961184</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1754466961185</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -162,6 +167,7 @@
     <MESSAGE value="create serializers" />
     <MESSAGE value="create views" />
     <MESSAGE value="create urls" />
-    <option name="LAST_COMMIT_MESSAGE" value="create urls" />
+    <MESSAGE value="create migrations" />
+    <option name="LAST_COMMIT_MESSAGE" value="create migrations" />
   </component>
 </project>
