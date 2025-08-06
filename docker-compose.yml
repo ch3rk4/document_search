@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: document_search_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build: .
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=your-secret-key-here-change-in-production
+      - DB_NAME=document_search_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./src:/app/src
+      - ./logs:/app/logs
+      - ./media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "cd src &&
+             python manage.py migrate &&
+             python manage.py collectstatic --noinput &&
+             python ../scripts/load_test_data.py &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./config/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./media:/app/media
+      - ./src/staticfiles:/app/staticfiles
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:
+  redis_data:
