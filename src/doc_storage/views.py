@@ -5,7 +5,7 @@ from django.views.generic import ListView, DetailView
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Avg
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -102,7 +102,7 @@ def get_search_statistics(request: HttpRequest) -> Response:
         'total_documents': total_documents,
         'popular_queries': list(popular_queries),
         'average_search_time': SearchHistory.objects.aggregate(
-            avg_time=models.Avg('search_time')
+            avg_time=Avg('search_time')
         )['avg_time'] or 0
     })
 
@@ -301,7 +301,7 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
         stats = {
             'total_searches': user_history.count(),
             'average_search_time': user_history.aggregate(
-                avg_time=models.Avg('search_time')
+                avg_time=Avg('search_time')
             )['avg_time'] or 0,
             'most_searched_queries': user_history.values('query').annotate(
                 count=Count('query')

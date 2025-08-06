@@ -1,8 +1,8 @@
 import pytest
 from django.test import TestCase
 from django.contrib.auth.models import User
-from .doc_storage.models import Document, DocumentCategory
-from .search_service.algorithms import SearchAlgorithms, SearchService
+from doc_storage.models import Document, DocumentCategory
+from search_service.algorithms import SearchAlgorithms, SearchService
 
 
 class SearchAlgorithmsTest(TestCase):
@@ -199,7 +199,7 @@ class SearchServiceTest(TestCase):
 
     def test_search_history_creation(self):
         """Тест создания записи в истории поиска"""
-        from src.doc_storage.models import SearchHistory
+        from doc_storage.models import SearchHistory
 
         initial_count = SearchHistory.objects.count()
 

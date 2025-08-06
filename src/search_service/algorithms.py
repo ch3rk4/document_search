@@ -1,7 +1,7 @@
 import re
 import time
 from typing import List, Dict, Set, Tuple, Optional
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, Count
 from django.db.models.functions import Length
 from doc_storage.models import Document, SearchHistory
 from collections import defaultdict
@@ -301,5 +301,5 @@ class SearchService:
         """Получение популярных поисковых запросов"""
         return (SearchHistory.objects
                 .values('query')
-                .annotate(search_count=models.Count('query'))
+                .annotate(search_count=Count('query'))
                 .order_by('-search_count')[:limit])
