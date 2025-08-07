@@ -1,0 +1,154 @@
+{% extends 'base.html' %}
+
+{% block title %}Замена файла в "{{ document.title }}" - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_list' %}">Документы</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_detail' document.pk %}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Замена файла</li>
+            </ol>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-file-upload"></i> Замена файла в документе</h2>
+                <p class="mb-0 text-muted">Загрузите новый файл для замены содержимого документа</p>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Информация о текущем документе -->
+                <div class="alert alert-info">
+                    <h5>Текущий документ:</h5>
+                    <ul class="mb-0">
+                        <li><strong>Заголовок:</strong> {{ document.title }}</li>
+                        <li><strong>Количество слов:</strong> {{ document.word_count }}</li>
+                        <li><strong>Последнее обновление:</strong> {{ document.updated_at|date:"d.m.Y H:i" }}</li>
+                        {% if document.file_path %}
+                            <li><strong>Текущий файл:</strong> {{ document.file_path.name }}</li>
+                        {% else %}
+                            <li><strong>Файл:</strong> <em>Документ создан вручную</em></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <form method="post" enctype="multipart/form-data" id="replaceForm">
+                    {% csrf_token %}
+                    
+                    <!-- Загрузка нового файла -->
+                    <div class="mb-3">
+                        {{ form.file.label_tag }}
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.file.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <strong>Поддерживаемые форматы:</strong> 
+                            <span class="badge bg-info me-1">.txt</span>
+                            <span class="badge bg-info me-1">.docx</span>
+                            <span class="badge bg-info me-1">.pdf</span>
+                            <span class="badge bg-info me-1">.xlsx</span>
+                            <span class="badge bg-info me-1">.pptx</span>
+                            <span class="badge bg-info me-1">.csv</span>
+                            <span class="badge bg-info me-1">.md</span>
+                            <span class="badge bg-info me-1">.html</span>
+                            <br>
+                            <small>Максимальный размер: {{ max_file_size_mb }}MB</small>
+                        </div>
+                    </div>
+
+                    <!-- Настройки замены -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.keep_title }}
+                            {{ form.keep_title.label_tag }}
+                        </div>
+                        <div class="form-text">
+                            Если снять галочку, заголовок документа будет заменен на имя файла
+                        </div>
+                    </div>
+
+                    <!-- Предупреждение -->
+                    <div class="alert alert-warning">
+                        <h6><i class="fas fa-exclamation-triangle"></i> Внимание!</h6>
+                        <ul class="mb-0">
+                            <li>Текущее содержимое документа будет <strong>полностью заменено</strong> на текст из нового файла</li>
+                            <li>Все результаты поиска в этом документе будут удалены</li>
+                            <li>Это действие нельзя отменить</li>
+                        </ul>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{% url 'doc_storage:document_detail' document.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Отмена
+                            </a>
+                            <a href="{% url 'doc_storage:document_edit' document.pk %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Редактировать текст
+                            </a>
+                        </div>
+                        <button type="submit" class="btn btn-warning" onclick="return confirmReplace()">
+                            <i class="fas fa-file-upload"></i> Заменить файл
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Текущее содержимое для справки -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5>Текущее содержимое документа</h5>
+                <small class="text-muted">(будет заменено на содержимое нового файла)</small>
+            </div>
+            <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                <pre style="white-space: pre-wrap; font-family: inherit; font-size: 0.9em;">{{ document.content }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmReplace() {
+    const fileInput = document.getElementById('id_file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Пожалуйста, выберите файл для загрузки');
+        return false;
+    }
+    
+    return confirm(
+        `Вы уверены, что хотите заменить содержимое документа на содержимое файла "${file.name}"?\n\n` +
+        'Это действие нельзя отменить!'
+    );
+}
+
+// Валидация размера файла на стороне клиента
+document.getElementById('id_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const maxSize = {{ max_file_size_mb }} * 1024 * 1024; // MB в байты
+    
+    if (file && file.size > maxSize) {
+        alert(`Файл слишком большой! Максимальный размер: {{ max_file_size_mb }}MB`);
+        this.value = '';
+    }
+});
+</script>
+{% endblock %}

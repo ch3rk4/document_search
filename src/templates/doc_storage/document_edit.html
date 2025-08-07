@@ -1,0 +1,212 @@
+{% extends 'base.html' %}
+
+{% block title %}Редактирование "{{ document.title }}" - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_list' %}">Документы</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_detail' document.pk %}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Редактирование</li>
+            </ol>
+        </nav>
+
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-edit"></i> Редактирование документа</h2>
+                <p class="mb-0 text-muted">Изменение содержимого и настроек документа</p>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" id="editForm">
+                    {% csrf_token %}
+                    
+                    <!-- Заголовок документа -->
+                    <div class="mb-3">
+                        {{ form.title.label_tag }}
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">
+                                {% for error in form.title.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Содержимое документа -->
+                    <div class="mb-3">
+                        {{ form.content.label_tag }}
+                        {{ form.content }}
+                        {% if form.content.errors %}
+                            <div class="text-danger">
+                                {% for error in form.content.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Отредактируйте содержимое документа. Количество слов обновится автоматически.
+                        </div>
+                        <div id="wordCount" class="text-muted small"></div>
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="mb-3">
+                        {{ form.category.label_tag }}
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger">
+                                {% for error in form.category.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Статус активности -->
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            {{ form.is_active.label_tag }}
+                        </div>
+                        {% if form.is_active.errors %}
+                            <div class="text-danger">
+                                {% for error in form.is_active.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Неактивные документы не участвуют в поиске
+                        </div>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <a href="{% url 'doc_storage:document_detail' document.pk %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Назад к документу
+                            </a>
+                            <a href="{% url 'doc_storage:document_replace_file' document.pk %}" class="btn btn-outline-warning">
+                                <i class="fas fa-file-upload"></i> Заменить файл
+                            </a>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-outline-info me-2" onclick="showPreview()">
+                                <i class="fas fa-eye"></i> Предварительный просмотр
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Сохранить изменения
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Информация о файле -->
+        {% if document.file_path %}
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5>Прикрепленный файл</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-file"></i> 
+                        <strong>{{ document.file_path.name }}</strong>
+                        <br>
+                        <small class="text-muted">Загружен: {{ document.updated_at|date:"d.m.Y H:i" }}</small>
+                    </div>
+                    <div>
+                        <a href="{{ document.file_path.url }}" class="btn btn-outline-primary btn-sm" download>
+                            <i class="fas fa-download"></i> Скачать
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно для предварительного просмотра -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Предварительный просмотр</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent">
+                    <!-- Содержимое будет загружено через JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-success" onclick="submitForm()">
+                    <i class="fas fa-save"></i> Сохранить изменения
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Подсчет слов в реальном времени
+document.getElementById('id_content').addEventListener('input', function() {
+    const content = this.value.trim();
+    const wordCount = content ? content.split(/\s+/).length : 0;
+    document.getElementById('wordCount').textContent = `Количество слов: ${wordCount}`;
+});
+
+// Предварительный просмотр
+function showPreview() {
+    const title = document.getElementById('id_title').value || 'Без заголовка';
+    const content = document.getElementById('id_content').value || 'Содержимое не введено';
+    const category = document.getElementById('id_category').selectedOptions[0]?.text || 'Без категории';
+    const isActive = document.getElementById('id_is_active').checked;
+    
+    const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+    
+    document.getElementById('previewContent').innerHTML = `
+        <div class="mb-3">
+            <h4>${title}</h4>
+            <div class="mb-2">
+                <span class="badge bg-primary">${category}</span>
+                <span class="badge bg-info">${wordCount} слов</span>
+                <span class="badge ${isActive ? 'bg-success' : 'bg-secondary'}">${isActive ? 'Активен' : 'Неактивен'}</span>
+            </div>
+        </div>
+        <div class="border p-3" style="max-height: 300px; overflow-y: auto;">
+            <pre style="white-space: pre-wrap; font-family: inherit;">${content}</pre>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+}
+
+function submitForm() {
+    document.getElementById('editForm').submit();
+}
+
+// Автоматический подсчет слов при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const contentField = document.getElementById('id_content');
+    contentField.dispatchEvent(new Event('input'));
+});
+</script>
+{% endblock %}

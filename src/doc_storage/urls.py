@@ -25,10 +25,19 @@ urlpatterns = [
     path('api/v1/documents/<int:document_id>/word-cloud/', views.get_document_word_cloud, name='word_cloud_api'),
     path('api/v1/documents/<int:document_id>/search-suggestions/', views.get_search_suggestions,
          name='suggestions_api'),
+    path('api/v1/upload-file/', views.upload_document_file_api, name='upload_file_api'),
 
     # Web интерфейс маршруты
     path('', views.DocumentListView.as_view(), name='document_list'),
     path('document/<int:pk>/', views.DocumentDetailView.as_view(), name='document_detail'),
     path('document/<int:pk>/search/', views.WordSearchView.as_view(), name='word_search'),
+    path('document/<int:pk>/edit/', views.DocumentEditView.as_view(), name='document_edit'),
+    path('document/<int:pk>/replace-file/', views.DocumentReplaceFileView.as_view(), name='document_replace_file'),
+
+    # Создание и загрузка документов
+    path('upload/', views.DocumentUploadView.as_view(), name='document_upload'),
+    path('create/', views.DocumentCreateView.as_view(), name='document_create'),
+
+    # История поиска
     path('search-history/', views.SearchHistoryView.as_view(), name='search_history'),
 ]
