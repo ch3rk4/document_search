@@ -92,10 +92,47 @@ class DocumentTagRelation(models.Model):
         verbose_name_plural = "Связи документов и тегов"
 
 
+class WordMatch(models.Model):
+    """Модель для хранения результатов поиска слов в документе"""
+
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, verbose_name="Документ")
+    query = models.CharField(max_length=255, verbose_name="Поисковый запрос")
+    matched_word = models.CharField(max_length=255, verbose_name="Найденное слово")
+    position = models.PositiveIntegerField(verbose_name="Позиция в тексте")
+    context_before = models.CharField(max_length=200, blank=True, verbose_name="Контекст до")
+    context_after = models.CharField(max_length=200, blank=True, verbose_name="Контекст после")
+    match_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('exact', 'Точное совпадение'),
+            ('partial', 'Частичное совпадение'),
+            ('fuzzy', 'Нечеткое совпадение'),
+        ],
+        default='exact',
+        verbose_name="Тип совпадения"
+    )
+    relevance_score = models.FloatField(default=1.0, verbose_name="Релевантность")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата поиска")
+
+    class Meta:
+        verbose_name = "Найденное слово"
+        verbose_name_plural = "Найденные слова"
+        ordering = ['-relevance_score', 'position']
+        indexes = [
+            models.Index(fields=['document', 'query']),
+            models.Index(fields=['matched_word']),
+            models.Index(fields=['position']),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.matched_word} в {self.document.title}"
+
+
 class SearchHistory(models.Model):
     """Модель истории поисковых запросов"""
 
     query = models.CharField(max_length=255, verbose_name="Поисковый запрос")
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, verbose_name="Документ")
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Пользователь")
     results_count = models.PositiveIntegerField(default=0, verbose_name="Количество результатов")
     search_time = models.FloatField(default=0.0, verbose_name="Время поиска (сек)")
@@ -108,9 +145,10 @@ class SearchHistory(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['query']),
+            models.Index(fields=['document']),
             models.Index(fields=['created_at']),
             models.Index(fields=['user']),
         ]
 
     def __str__(self) -> str:
-        return f"{self.query} ({self.results_count} результатов)"
+        return f"{self.query} в {self.document.title} ({self.results_count} результатов)"

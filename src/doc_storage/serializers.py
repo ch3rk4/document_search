@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory
+from .models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory, WordMatch
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -127,12 +127,13 @@ class DocumentListSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.username', read_only=True)
     category_name = serializers.CharField(source='category.name', read_only=True)
     tags_count = serializers.SerializerMethodField()
+    content_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Document
         fields = [
             'id', 'title', 'author_name', 'category_name',
-            'created_at', 'updated_at', 'word_count', 'tags_count'
+            'created_at', 'updated_at', 'word_count', 'tags_count', 'content_preview'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'word_count']
 
@@ -140,27 +141,95 @@ class DocumentListSerializer(serializers.ModelSerializer):
         """Подсчет количества тегов у документа"""
         return obj.tag_relations.count()
 
+    def get_content_preview(self, obj: Document) -> str:
+        """Превью содержимого документа"""
+        return obj.content[:200] + "..." if len(obj.content) > 200 else obj.content
 
-class SearchResultSerializer(serializers.Serializer):
-    """Сериализатор для результатов поиска"""
+
+class WordMatchSerializer(serializers.ModelSerializer):
+    """Сериализатор для найденных слов"""
+
+    document_title = serializers.CharField(source='document.title', read_only=True)
+
+    class Meta:
+        model = WordMatch
+        fields = [
+            'id', 'document', 'document_title', 'query', 'matched_word',
+            'position', 'context_before', 'context_after', 'match_type',
+            'relevance_score', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class WordSearchResultSerializer(serializers.Serializer):
+    """Сериализатор для результатов поиска слов в документе"""
 
     document = DocumentListSerializer(read_only=True)
-    relevance_score = serializers.FloatField(read_only=True)
-    preview = serializers.CharField(read_only=True)
-    search_type = serializers.CharField(read_only=True, required=False)
-    title_matches = serializers.IntegerField(read_only=True, required=False)
-    content_matches = serializers.IntegerField(read_only=True, required=False)
+    query = serializers.CharField(read_only=True)
+    total_matches = serializers.IntegerField(read_only=True)
+    search_time = serializers.FloatField(read_only=True)
+    matches = WordMatchSerializer(many=True, read_only=True)
+    search_type = serializers.CharField(read_only=True)
+    algorithms_used = serializers.ListField(child=serializers.CharField(), read_only=True)
+
+
+class SearchSuggestionSerializer(serializers.Serializer):
+    """Сериализатор для поисковых подсказок"""
+
+    word = serializers.CharField()
+    frequency = serializers.IntegerField()
+    context_preview = serializers.CharField()
+
+
+class DocumentWordCloudSerializer(serializers.Serializer):
+    """Сериализатор для облака слов документа"""
+
+    document = DocumentListSerializer(read_only=True)
+    word_frequencies = serializers.DictField(
+        child=serializers.IntegerField(),
+        read_only=True
+    )
+    total_unique_words = serializers.IntegerField(read_only=True)
 
 
 class SearchHistorySerializer(serializers.ModelSerializer):
     """Сериализатор для истории поиска"""
 
     user_name = serializers.CharField(source='user.username', read_only=True)
+    document_title = serializers.CharField(source='document.title', read_only=True)
 
     class Meta:
         model = SearchHistory
         fields = [
-            'id', 'query', 'user_name', 'results_count',
-            'search_time', 'created_at', 'ip_address'
+            'id', 'query', 'document', 'document_title', 'user_name',
+            'results_count', 'search_time', 'created_at', 'ip_address'
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class SearchStatisticsSerializer(serializers.Serializer):
+    """Сериализатор для статистики поиска"""
+
+    total_searches = serializers.IntegerField(read_only=True)
+    total_documents = serializers.IntegerField(read_only=True)
+    average_search_time = serializers.FloatField(read_only=True)
+    most_searched_words = serializers.ListField(
+        child=serializers.DictField(), read_only=True
+    )
+    documents_with_searches = serializers.ListField(
+        child=serializers.DictField(), read_only=True
+    )
+
+
+class DocumentAnalysisSerializer(serializers.Serializer):
+    """Сериализатор для анализа документа"""
+
+    document = DocumentListSerializer(read_only=True)
+    readability_score = serializers.FloatField(read_only=True)
+    complexity_score = serializers.FloatField(read_only=True)
+    most_common_words = serializers.ListField(
+        child=serializers.DictField(), read_only=True
+    )
+    sentence_count = serializers.IntegerField(read_only=True)
+    paragraph_count = serializers.IntegerField(read_only=True)
+    average_word_length = serializers.FloatField(read_only=True)

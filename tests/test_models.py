@@ -2,7 +2,7 @@ import pytest
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory
+from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory, WordMatch
 
 
 class DocumentModelTest(TestCase):
@@ -24,7 +24,7 @@ class DocumentModelTest(TestCase):
         """Тест создания документа"""
         document = Document.objects.create(
             title='Тестовый документ',
-            content='Содержимое тестового документа для проверки функциональности',
+            content='Содержимое тестового документа для проверки функциональности python программирование',
             author=self.user,
             category=self.category
         )
@@ -33,7 +33,7 @@ class DocumentModelTest(TestCase):
         self.assertEqual(document.author, self.user)
         self.assertEqual(document.category, self.category)
         self.assertTrue(document.is_active)
-        self.assertEqual(document.word_count, 6)  # Количество слов в content
+        self.assertEqual(document.word_count, 8)  # Количество слов в content
 
     def test_document_str_method(self):
         """Тест строкового представления документа"""
@@ -65,6 +65,24 @@ class DocumentModelTest(TestCase):
 
         self.assertEqual(document.word_count, 0)
 
+    def test_document_update_word_count(self):
+        """Тест обновления количества слов при изменении содержимого"""
+        document = Document.objects.create(
+            title='Тестовый документ',
+            content='Первоначальное содержимое',
+            author=self.user
+        )
+
+        initial_word_count = document.word_count
+        self.assertEqual(initial_word_count, 2)
+
+        # Обновляем содержимое
+        document.content = 'Новое расширенное содержимое документа с большим количеством слов'
+        document.save()
+
+        self.assertGreater(document.word_count, initial_word_count)
+        self.assertEqual(document.word_count, 9)
+
 
 class DocumentCategoryModelTest(TestCase):
     """Тесты для модели DocumentCategory"""
@@ -88,6 +106,17 @@ class DocumentCategoryModelTest(TestCase):
 
         self.assertEqual(str(category), 'Наука')
 
+    def test_category_ordering(self):
+        """Тест сортировки категорий по имени"""
+        cat1 = DocumentCategory.objects.create(name='Я_Последняя')
+        cat2 = DocumentCategory.objects.create(name='А_Первая')
+        cat3 = DocumentCategory.objects.create(name='В_Средняя')
+
+        categories = list(DocumentCategory.objects.all())
+        self.assertEqual(categories[0].name, 'А_Первая')
+        self.assertEqual(categories[1].name, 'В_Средняя')
+        self.assertEqual(categories[2].name, 'Я_Последняя')
+
 
 class DocumentTagModelTest(TestCase):
     """Тесты для модели DocumentTag"""
@@ -102,12 +131,134 @@ class DocumentTagModelTest(TestCase):
         self.assertEqual(tag.name, 'python')
         self.assertEqual(tag.color, '#ff0000')
 
+    def test_tag_str_method(self):
+        """Тест строкового представления тега"""
+        tag = DocumentTag.objects.create(name='javascript')
+        self.assertEqual(str(tag), 'javascript')
+
+    def test_tag_default_color(self):
+        """Тест цвета тега по умолчанию"""
+        tag = DocumentTag.objects.create(name='defaultcolor')
+        self.assertEqual(tag.color, '#007bff')
+
     def test_tag_unique_name(self):
         """Тест уникальности имени тега"""
         DocumentTag.objects.create(name='python')
 
         with self.assertRaises(Exception):  # IntegrityError в реальной БД
             DocumentTag.objects.create(name='python')
+
+
+class WordMatchModelTest(TestCase):
+    """Тесты для модели WordMatch"""
+
+    def setUp(self):
+        """Настройка тестовых данных"""
+        self.user = User.objects.create_user(
+            username='testuser',
+            password='testpass123'
+        )
+        self.document = Document.objects.create(
+            title='Тестовый документ',
+            content='Python это язык программирования для разработки приложений',
+            author=self.user
+        )
+
+    def test_word_match_creation(self):
+        """Тест создания найденного слова"""
+        word_match = WordMatch.objects.create(
+            document=self.document,
+            query='python',
+            matched_word='Python',
+            position=0,
+            context_before='',
+            context_after='это язык программирования',
+            match_type='exact',
+            relevance_score=1.0
+        )
+
+        self.assertEqual(word_match.document, self.document)
+        self.assertEqual(word_match.query, 'python')
+        self.assertEqual(word_match.matched_word, 'Python')
+        self.assertEqual(word_match.position, 0)
+        self.assertEqual(word_match.match_type, 'exact')
+        self.assertEqual(word_match.relevance_score, 1.0)
+
+    def test_word_match_str_method(self):
+        """Тест строкового представления найденного слова"""
+        word_match = WordMatch.objects.create(
+            document=self.document,
+            query='программирование',
+            matched_word='программирования',
+            position=20,
+            match_type='partial'
+        )
+
+        expected_str = f"программирования в {self.document.title}"
+        self.assertEqual(str(word_match), expected_str)
+
+    def test_word_match_ordering(self):
+        """Тест сортировки найденных слов"""
+        # Создаем несколько совпадений с разными оценками релевантности
+        match1 = WordMatch.objects.create(
+            document=self.document,
+            query='test',
+            matched_word='test1',
+            position=10,
+            relevance_score=0.5
+        )
+        match2 = WordMatch.objects.create(
+            document=self.document,
+            query='test',
+            matched_word='test2',
+            position=5,
+            relevance_score=1.0
+        )
+        match3 = WordMatch.objects.create(
+            document=self.document,
+            query='test',
+            matched_word='test3',
+            position=15,
+            relevance_score=1.0
+        )
+
+        matches = list(WordMatch.objects.all())
+
+        # Первый должен быть с наивысшей релевантностью и наименьшей позицией
+        self.assertEqual(matches[0], match2)
+        self.assertEqual(matches[1], match3)  # Та же релевантность, но позиция больше
+        self.assertEqual(matches[2], match1)  # Наименьшая релевантность
+
+    def test_word_match_types(self):
+        """Тест разных типов совпадений"""
+        exact_match = WordMatch.objects.create(
+            document=self.document,
+            query='python',
+            matched_word='python',
+            position=0,
+            match_type='exact'
+        )
+
+        partial_match = WordMatch.objects.create(
+            document=self.document,
+            query='прог',
+            matched_word='программирования',
+            position=20,
+            match_type='partial'
+        )
+
+        fuzzy_match = WordMatch.objects.create(
+            document=self.document,
+            query='питон',
+            matched_word='python',
+            position=0,
+            match_type='fuzzy',
+            relevance_score=0.8
+        )
+
+        self.assertEqual(exact_match.match_type, 'exact')
+        self.assertEqual(partial_match.match_type, 'partial')
+        self.assertEqual(fuzzy_match.match_type, 'fuzzy')
 
 
 class SearchHistoryModelTest(TestCase):
@@ -120,11 +271,17 @@ class SearchHistoryModelTest(TestCase):
             email='searcher@example.com',
             password='testpass123'
         )
+        self.document = Document.objects.create(
+            title='Тестовый документ',
+            content='Содержимое документа для поиска',
+            author=self.user
+        )
 
     def test_search_history_creation(self):
         """Тест создания записи истории поиска"""
         history = SearchHistory.objects.create(
             query='python программирование',
+            document=self.document,
             user=self.user,
             results_count=15,
             search_time=0.0234,
@@ -132,6 +289,7 @@ class SearchHistoryModelTest(TestCase):
         )
 
         self.assertEqual(history.query, 'python программирование')
+        self.assertEqual(history.document, self.document)
         self.assertEqual(history.user, self.user)
         self.assertEqual(history.results_count, 15)
         self.assertEqual(history.search_time, 0.0234)
@@ -141,11 +299,47 @@ class SearchHistoryModelTest(TestCase):
         """Тест строкового представления истории поиска"""
         history = SearchHistory.objects.create(
             query='тестовый запрос',
+            document=self.document,
             results_count=5
         )
 
-        expected_str = 'тестовый запрос (5 результатов)'
+        expected_str = f'тестовый запрос в {self.document.title} (5 результатов)'
         self.assertEqual(str(history), expected_str)
+
+    def test_search_history_without_user(self):
+        """Тест создания истории поиска без пользователя"""
+        history = SearchHistory.objects.create(
+            query='анонимный поиск',
+            document=self.document,
+            results_count=3,
+            ip_address='10.0.0.1'
+        )
+
+        self.assertIsNone(history.user)
+        self.assertEqual(history.ip_address, '10.0.0.1')
+
+    def test_search_history_ordering(self):
+        """Тест сортировки истории поиска по дате"""
+        import time
+
+        history1 = SearchHistory.objects.create(
+            query='первый поиск',
+            document=self.document,
+            user=self.user
+        )
+
+        time.sleep(0.01)  # Небольшая задержка для разных временных меток
+
+        history2 = SearchHistory.objects.create(
+            query='второй поиск',
+            document=self.document,
+            user=self.user
+        )
+
+        histories = list(SearchHistory.objects.all())
+        # Более поздние записи должны быть первыми
+        self.assertEqual(histories[0], history2)
+        self.assertEqual(histories[1], history1)
 
 
 class DocumentTagRelationModelTest(TestCase):
@@ -159,7 +353,7 @@ class DocumentTagRelationModelTest(TestCase):
         )
         self.document = Document.objects.create(
             title='Тестовый документ',
-            content='Содержимое',
+            content='Содержимое для тестирования тегов',
             author=self.user
         )
         self.tag = DocumentTag.objects.create(name='test')
@@ -186,3 +380,48 @@ class DocumentTagRelationModelTest(TestCase):
                 document=self.document,
                 tag=self.tag
             )
+
+    def test_multiple_tags_per_document(self):
+        """Тест добавления нескольких тегов к одному документу"""
+        tag1 = DocumentTag.objects.create(name='python')
+        tag2 = DocumentTag.objects.create(name='programming')
+        tag3 = DocumentTag.objects.create(name='web')
+
+        DocumentTagRelation.objects.create(document=self.document, tag=tag1)
+        DocumentTagRelation.objects.create(document=self.document, tag=tag2)
+        DocumentTagRelation.objects.create(document=self.document, tag=tag3)
+
+        # Проверяем, что у документа есть все три тега
+        document_tags = self.document.tag_relations.all()
+        self.assertEqual(document_tags.count(), 3)
+
+        tag_names = [relation.tag.name for relation in document_tags]
+        self.assertIn('python', tag_names)
+        self.assertIn('programming', tag_names)
+        self.assertIn('web', tag_names)
+
+    def test_multiple_documents_per_tag(self):
+        """Тест добавления одного тега к нескольким документам"""
+        doc1 = Document.objects.create(
+            title='Документ 1',
+            content='Содержимое первого документа',
+            author=self.user
+        )
+        doc2 = Document.objects.create(
+            title='Документ 2',
+            content='Содержимое второго документа',
+            author=self.user
+        )
+
+        python_tag = DocumentTag.objects.create(name='python')
+
+        DocumentTagRelation.objects.create(document=doc1, tag=python_tag)
+        DocumentTagRelation.objects.create(document=doc2, tag=python_tag)
+
+        # Проверяем, что тег связан с двумя документами
+        tag_relations = python_tag.document_relations.all()
+        self.assertEqual(tag_relations.count(), 2)
+
+        document_titles = [relation.document.title for relation in tag_relations]
+        self.assertIn('Документ 1', document_titles)
+        self.assertIn('Документ 2', document_titles)

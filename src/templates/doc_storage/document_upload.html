@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+
+{% block title %}Загрузка документа - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-upload"></i> Загрузка документа из файла</h2>
+                <p class="mb-0 text-muted">Загрузите файл, и система автоматически извлечет из него текст</p>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    <!-- Загрузка файла -->
+                    <div class="mb-3">
+                        {{ form.file.label_tag }}
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.file.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <strong>Поддерживаемые форматы:</strong> 
+                            <span class="badge bg-info me-1">.txt</span>
+                            <span class="badge bg-info me-1">.docx</span>
+                            <span class="badge bg-info me-1">.pdf</span>
+                            <span class="badge bg-info me-1">.xlsx</span>
+                            <span class="badge bg-info me-1">.pptx</span>
+                            <span class="badge bg-info me-1">.csv</span>
+                            <span class="badge bg-info me-1">.md</span>
+                            <span class="badge bg-info me-1">.html</span>
+                            <br>
+                            <small>Максимальный размер: {{ max_file_size_mb }}MB</small>
+                        </div>
+                    </div>
+
+                    <!-- Заголовок документа -->
+                    <div class="mb-3">
+                        {{ form.title.label_tag }}
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">
+                                {% for error in form.title.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        {{ form.title.help_text|safe }}
+                    </div>
+
+                    <!-- Категория -->
+                    <div class="mb-3">
+                        {{ form.category.label_tag }}
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger">
+                                {% for error in form.category.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Теги -->
+                    <div class="mb-3">
+                        {{ form.tags.label_tag }}
+                        <div class="row">
+                            {% for tag in form.tags %}
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check">
+                                        {{ tag.tag }}
+                                        <label class="form-check-label" for="{{ tag.id_for_label }}" style="color: {{ tag.choice_value.color }};">
+                                            {{ tag.choice_label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.tags.errors %}
+                            <div class="text-danger">
+                                {% for error in form.tags.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'doc_storage:document_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="showPreview()">
+                                <i class="fas fa-eye"></i> Предварительный просмотр
+                            </button>
+                            <button type="submit" class="btn btn-success" id="submitBtn">
+                                <i class="fas fa-upload"></i> Загрузить документ
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Альтернативный способ создания -->
+        <div class="card mt-4">
+            <div class="card-body text-center">
+                <h5>Создать документ вручную</h5>
+                <p class="text-muted">Если у вас нет файла, можете создать документ, введя текст вручную</p>
+                <a href="{% url 'doc_storage:document_create' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-edit"></i> Создать документ вручную
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для предварительного просмотра -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Предварительный просмотр файла</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                        <p>Извлекаем текст из файла...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="btn btn-success" onclick="submitForm()">
+                    <i class="fas fa-upload"></i> Загрузить документ
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function showPreview() {
+    const fileInput = document.getElementById('id_file');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Сначала выберите файл');
+        return;
+    }
+    
+    // Показываем модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+    modal.show();
+    
+    // Здесь можно добавить AJAX запрос для предварительного просмотра
+    // Пока показываем информацию о файле
+    document.getElementById('previewContent').innerHTML = `
+        <div class="alert alert-info">
+            <h6>Информация о файле:</h6>
+            <ul class="mb-0">
+                <li><strong>Имя:</strong> ${file.name}</li>
+                <li><strong>Размер:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</li>
+                <li><strong>Тип:</strong> ${file.type || 'Неизвестно'}</li>
+            </ul>
+        </div>
+        <p><strong>Примечание:</strong> Предварительный просмотр содержимого будет доступен после загрузки файла.</p>
+    `;
+}
+
+function submitForm() {
+    document.getElementById('uploadForm').submit();
+}
+
+// Автоматическое заполнение заголовка на основе имени файла
+document.getElementById('id_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const titleInput = document.getElementById('id_title');
+    
+    if (file && !titleInput.value.trim()) {
+        // Удаляем расширение из имени файла
+        const fileName = file.name.replace(/\.[^/.]+$/, "");
+        titleInput.value = fileName;
+    }
+});
+
+// Валидация размера файла на стороне клиента
+document.getElementById('id_file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const maxSize = {{ max_file_size_mb }} * 1024 * 1024; // MB в байты
+    
+    if (file && file.size > maxSize) {
+        alert(`Файл слишком большой! Максимальный размер: {{ max_file_size_mb }}MB`);
+        this.value = '';
+    }
+});
+</script>
+{% endblock %}

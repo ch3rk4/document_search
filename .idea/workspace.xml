@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fixes of tests" />
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="new migrate">
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,48 +15,51 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
+        <option value="Dockerfile" />
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="day_1" />
+        <entry key="$PROJECT_DIR$" value="day_2" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "ch3rk4"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ch3rk4&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/ch3rk4/document_search.git",
-    "accountId": "6f96d88e-1535-4788-810a-49b80da077ca"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/ch3rk4/document_search.git&quot;,
+    &quot;accountId&quot;: &quot;6f96d88e-1535-4788-810a-49b80da077ca&quot;
   }
-}]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 4
-}]]></component>
+}</component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 4
+}</component>
   <component name="ProjectId" id="30u1EOgXCAuc8VZu30X2qfc24Dw" />
   <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Python tests for test_models.DocumentModelTest.executor": "Run",
-    "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
-    "Python.run_tests.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "day__2"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Python tests.Python tests for test_models.DocumentModelTest.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor&quot;: &quot;Run&quot;,
+    &quot;Python.run_tests.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;day__4&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\petys\PycharmProjects\document_search" />
@@ -116,9 +121,11 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.run_tests" />
         <item itemvalue="Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest" />
         <item itemvalue="Python tests.Python tests for test_models.DocumentModelTest" />
+        <item itemvalue="Python.run_tests" />
+        <item itemvalue="Python.run_tests" />
+        <item itemvalue="Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest" />
       </list>
     </recent_temporary>
   </component>
@@ -250,7 +257,39 @@
       <option name="project" value="LOCAL" />
       <updated>1754481617525</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="create web">
+      <option name="closed" value="true" />
+      <created>1754481874575</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1754481874575</updated>
+    </task>
+    <task id="LOCAL-00016" summary="configurate docker">
+      <option name="closed" value="true" />
+      <created>1754482063973</created>
+      <option name="number" value="00016" />
+      <option name="presentableId" value="LOCAL-00016" />
+      <option name="project" value="LOCAL" />
+      <updated>1754482063973</updated>
+    </task>
+    <task id="LOCAL-00017" summary="rework">
+      <option name="closed" value="true" />
+      <created>1754558722673</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1754558722674</updated>
+    </task>
+    <task id="LOCAL-00018" summary="new migrate">
+      <option name="closed" value="true" />
+      <created>1754558739725</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1754558739725</updated>
+    </task>
+    <option name="localTasksCounter" value="19" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -268,6 +307,10 @@
     <MESSAGE value="create tests" />
     <MESSAGE value="fixes" />
     <MESSAGE value="fixes of tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixes of tests" />
+    <MESSAGE value="create web" />
+    <MESSAGE value="configurate docker" />
+    <MESSAGE value="rework" />
+    <MESSAGE value="new migrate" />
+    <option name="LAST_COMMIT_MESSAGE" value="new migrate" />
   </component>
 </project>

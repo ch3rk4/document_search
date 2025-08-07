@@ -37,6 +37,12 @@
                             <span class="badge bg-primary me-2">{{ document.category.name }}</span>
                         {% endif %}
                         <span class="badge bg-info">{{ document.word_count }} слов</span>
+
+                        <div class="mt-2">
+                            <a href="{% url 'doc_storage:word_search' document.pk %}" class="btn btn-success btn-sm">
+                                <i class="fas fa-search"></i> Поиск слов в документе
+                            </a>
+                        </div>
                     </div>
                     <div class="col-sm-6 text-end">
                         <!-- Теги -->
@@ -50,8 +56,49 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-4">
+        <!-- Быстрый поиск слов -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Быстрый поиск слов</h5>
+            </div>
+            <div class="card-body">
+                <form action="{% url 'doc_storage:word_search' document.pk %}" method="get">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" placeholder="Введите слово...">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Последние поиски в документе -->
+        {% if recent_searches %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5>Последние поиски</h5>
+            </div>
+            <div class="card-body">
+                {% for search in recent_searches %}
+                    <div class="mb-2">
+                        <a href="{% url 'doc_storage:word_search' document.pk %}?q={{ search.query|urlencode }}" class="text-decoration-none">
+                            <strong>"{{ search.query }}"</strong>
+                        </a>
+                        <br>
+                        <small class="text-muted">
+                            {{ search.results_count }} результатов | {{ search.search_time|floatformat:3 }}с
+                            | {{ search.created_at|date:"d.m H:i" }}
+                        </small>
+                    </div>
+                    {% if not forloop.last %}<hr class="my-2">{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Похожие документы -->
         {% if similar_documents %}
             <div class="card">
