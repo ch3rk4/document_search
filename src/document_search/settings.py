@@ -110,6 +110,10 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Создаем директорию для медиа файлов
+import os
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+
 # Первичный ключ по умолчанию
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

@@ -168,26 +168,20 @@ class FileReplaceForm(forms.Form):
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
 
-    def clean_file(self):
-        """Валидация файла для замены"""
-        file = self.cleaned_data.get('file')
+    def clean_title(self):
+        """Валидация заголовка"""
+        title = self.cleaned_data.get('title', '').strip()
 
-        if not file:
-            return file
+        # Если заголовок не указан, используем имя файла
+        if not title:
+            file = self.cleaned_data.get('file')
+            if file:
+                title = Path(file.name).stem
+            else:
+                return title
 
-        # Проверяем размер файла
-        if file.size > FileTextExtractor.MAX_FILE_SIZE:
-            raise ValidationError(
-                f"Файл слишком большой. Максимальный размер: {FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)}MB"
-            )
+        # Проверяем уникальность заголовка только если он не пустой
+        if title and Document.objects.filter(title=title, is_active=True).exists():
+            raise ValidationError("Документ с таким заголовком уже существует")
 
-        # Проверяем тип файла
-        if not FileTextExtractor.is_supported_file(file.name):
-            file_extension = Path(file.name).suffix.lower()
-            supported_extensions = ', '.join(sorted(FileTextExtractor.SUPPORTED_EXTENSIONS))
-            raise ValidationError(
-                f"Неподдерживаемый тип файла: {file_extension}. "
-                f"Поддерживаемые форматы: {supported_extensions}"
-            )
-
-        return file
+        return title

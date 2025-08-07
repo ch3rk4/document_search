@@ -25,17 +25,19 @@
                     
                     <!-- Загрузка файла -->
                     <div class="mb-3">
-                        {{ form.file.label_tag }}
+                        <label for="{{ form.file.id_for_label }}" class="form-label">
+                            <i class="fas fa-file"></i> {{ form.file.label }}
+                        </label>
                         {{ form.file }}
                         {% if form.file.errors %}
                             <div class="text-danger">
                                 {% for error in form.file.errors %}
-                                    <small>{{ error }}</small>
+                                    <small>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
                         <div class="form-text">
-                            <strong>Поддерживаемые форматы:</strong> 
+                            <strong>Поддерживаемые форматы:</strong>
                             <span class="badge bg-info me-1">.txt</span>
                             <span class="badge bg-info me-1">.docx</span>
                             <span class="badge bg-info me-1">.pdf</span>
@@ -47,30 +49,35 @@
                             <br>
                             <small>Максимальный размер: {{ max_file_size_mb }}MB</small>
                         </div>
+                        <div id="fileInfo" class="mt-2"></div>
                     </div>
 
                     <!-- Заголовок документа -->
                     <div class="mb-3">
-                        {{ form.title.label_tag }}
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            <i class="fas fa-heading"></i> {{ form.title.label }}
+                        </label>
                         {{ form.title }}
                         {% if form.title.errors %}
                             <div class="text-danger">
                                 {% for error in form.title.errors %}
-                                    <small>{{ error }}</small>
+                                    <small>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        {{ form.title.help_text|safe }}
+                        <div class="form-text">{{ form.title.help_text }}</div>
                     </div>
 
                     <!-- Категория -->
                     <div class="mb-3">
-                        {{ form.category.label_tag }}
+                        <label for="{{ form.category.id_for_label }}" class="form-label">
+                            <i class="fas fa-folder"></i> {{ form.category.label }}
+                        </label>
                         {{ form.category }}
                         {% if form.category.errors %}
                             <div class="text-danger">
                                 {% for error in form.category.errors %}
-                                    <small>{{ error }}</small>
+                                    <small>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
@@ -78,14 +85,16 @@
 
                     <!-- Теги -->
                     <div class="mb-3">
-                        {{ form.tags.label_tag }}
+                        <label class="form-label">
+                            <i class="fas fa-tags"></i> {{ form.tags.label }}
+                        </label>
                         <div class="row">
                             {% for tag in form.tags %}
                                 <div class="col-md-4 mb-2">
                                     <div class="form-check">
                                         {{ tag.tag }}
                                         <label class="form-check-label" for="{{ tag.id_for_label }}" style="color: {{ tag.choice_value.color }};">
-                                            {{ tag.choice_label }}
+                                            <i class="fas fa-tag"></i> {{ tag.choice_label }}
                                         </label>
                                     </div>
                                 </div>
@@ -94,7 +103,7 @@
                         {% if form.tags.errors %}
                             <div class="text-danger">
                                 {% for error in form.tags.errors %}
-                                    <small>{{ error }}</small>
+                                    <small>{{ error }}</small><br>
                                 {% endfor %}
                             </div>
                         {% endif %}
@@ -106,10 +115,10 @@
                             <i class="fas fa-arrow-left"></i> Назад к списку
                         </a>
                         <div>
-                            <button type="button" class="btn btn-outline-primary me-2" onclick="showPreview()">
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="showPreview()" id="previewBtn" disabled>
                                 <i class="fas fa-eye"></i> Предварительный просмотр
                             </button>
-                            <button type="submit" class="btn btn-success" id="submitBtn">
+                            <button type="submit" class="btn btn-success" id="submitBtn" disabled>
                                 <i class="fas fa-upload"></i> Загрузить документ
                             </button>
                         </div>
@@ -141,12 +150,7 @@
             </div>
             <div class="modal-body">
                 <div id="previewContent">
-                    <div class="text-center">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Загрузка...</span>
-                        </div>
-                        <p>Извлекаем текст из файла...</p>
-                    </div>
+                    <!-- Содержимое будет загружено через JavaScript -->
                 </div>
             </div>
             <div class="modal-footer">
@@ -160,59 +164,130 @@
 </div>
 
 <script>
+// Автоматическое заполнение заголовка на основе имени файла
+document.getElementById('{{ form.file.id_for_label }}').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    const submitBtn = document.getElementById('submitBtn');
+    const previewBtn = document.getElementById('previewBtn');
+    const fileInfo = document.getElementById('fileInfo');
+
+    if (file) {
+        // Проверяем размер файла
+        const maxSize = {{ max_file_size_mb }} * 1024 * 1024;
+        if (file.size > maxSize) {
+            alert(`Файл слишком большой! Максимальный размер: {{ max_file_size_mb }}MB`);
+            this.value = '';
+            submitBtn.disabled = true;
+            previewBtn.disabled = true;
+            fileInfo.innerHTML = '';
+            return;
+        }
+
+        // Заполняем заголовок если он пустой
+        if (!titleInput.value.trim()) {
+            const fileName = file.name.replace(/\.[^/.]+$/, "");
+            titleInput.value = fileName;
+        }
+
+        // Показываем информацию о файле
+        fileInfo.innerHTML = `
+            <div class="alert alert-success">
+                <h6><i class="fas fa-info-circle"></i> Информация о файле:</h6>
+                <ul class="mb-0">
+                    <li><strong>Имя:</strong> ${file.name}</li>
+                    <li><strong>Размер:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</li>
+                    <li><strong>Тип:</strong> ${file.type || 'Неизвестно'}</li>
+                </ul>
+            </div>
+        `;
+
+        // Активируем кнопки
+        submitBtn.disabled = false;
+        previewBtn.disabled = false;
+    } else {
+        fileInfo.innerHTML = '';
+        submitBtn.disabled = true;
+        previewBtn.disabled = true;
+    }
+});
+
 function showPreview() {
-    const fileInput = document.getElementById('id_file');
+    const fileInput = document.getElementById('{{ form.file.id_for_label }}');
     const file = fileInput.files[0];
-    
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+
     if (!file) {
         alert('Сначала выберите файл');
         return;
     }
-    
+
+    // Получаем выбранные теги
+    const selectedTags = [];
+    document.querySelectorAll('input[name="tags"]:checked').forEach(input => {
+        const label = document.querySelector(`label[for="${input.id}"]`);
+        if (label) {
+            selectedTags.push(label.textContent.trim().replace('🏷️', '').trim());
+        }
+    });
+
+    const title = titleInput.value || 'Без заголовка';
+    const category = categorySelect.selectedOptions[0]?.text || 'Без категории';
+
     // Показываем модальное окно
     const modal = new bootstrap.Modal(document.getElementById('previewModal'));
     modal.show();
-    
-    // Здесь можно добавить AJAX запрос для предварительного просмотра
-    // Пока показываем информацию о файле
+
+    // Заполняем предварительный просмотр
     document.getElementById('previewContent').innerHTML = `
+        <div class="mb-3">
+            <h4>${title}</h4>
+            <div class="mb-2">
+                <span class="badge bg-primary">${category}</span>
+                ${selectedTags.map(tag => `<span class="badge bg-secondary ms-1">${tag}</span>`).join('')}
+            </div>
+        </div>
         <div class="alert alert-info">
-            <h6>Информация о файле:</h6>
+            <h6><i class="fas fa-file"></i> Файл для загрузки:</h6>
             <ul class="mb-0">
                 <li><strong>Имя:</strong> ${file.name}</li>
                 <li><strong>Размер:</strong> ${(file.size / 1024 / 1024).toFixed(2)} MB</li>
                 <li><strong>Тип:</strong> ${file.type || 'Неизвестно'}</li>
             </ul>
         </div>
-        <p><strong>Примечание:</strong> Предварительный просмотр содержимого будет доступен после загрузки файла.</p>
+        <div class="alert alert-warning">
+            <p><strong>Примечание:</strong> Текст будет автоматически извлечен из файла после загрузки.
+            Поддерживаются следующие форматы: .txt, .docx, .pdf, .xlsx, .pptx, .csv, .md, .html</p>
+        </div>
     `;
 }
 
 function submitForm() {
+    // Закрываем модальное окно
+    const modal = bootstrap.Modal.getInstance(document.getElementById('previewModal'));
+    modal.hide();
+
+    // Отправляем форму
     document.getElementById('uploadForm').submit();
 }
 
-// Автоматическое заполнение заголовка на основе имени файла
-document.getElementById('id_file').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const titleInput = document.getElementById('id_title');
-    
-    if (file && !titleInput.value.trim()) {
-        // Удаляем расширение из имени файла
-        const fileName = file.name.replace(/\.[^/.]+$/, "");
-        titleInput.value = fileName;
-    }
-});
+// Валидация формы перед отправкой
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('{{ form.file.id_for_label }}');
 
-// Валидация размера файла на стороне клиента
-document.getElementById('id_file').addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    const maxSize = {{ max_file_size_mb }} * 1024 * 1024; // MB в байты
-    
-    if (file && file.size > maxSize) {
-        alert(`Файл слишком большой! Максимальный размер: {{ max_file_size_mb }}MB`);
-        this.value = '';
+    if (!fileInput.files[0]) {
+        e.preventDefault();
+        alert('Пожалуйста, выберите файл для загрузки');
+        return false;
     }
+
+    // Показываем индикатор загрузки
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+    submitBtn.disabled = true;
+
+    return true;
 });
 </script>
 {% endblock %}

@@ -4,33 +4,37 @@
 import os
 import mimetypes
 import chardet
+import tempfile
 from typing import Optional, Tuple
 from pathlib import Path
 
 try:
     import docx
+    DOCX_AVAILABLE = True
 except ImportError:
     docx = None
+    DOCX_AVAILABLE = False
 
 try:
     import PyPDF2
+    PDF_AVAILABLE = True
 except ImportError:
     PyPDF2 = None
+    PDF_AVAILABLE = False
 
 try:
     import openpyxl
+    EXCEL_AVAILABLE = True
 except ImportError:
     openpyxl = None
-
-try:
-    import xlrd
-except ImportError:
-    xlrd = None
+    EXCEL_AVAILABLE = False
 
 try:
     from pptx import Presentation
+    PPTX_AVAILABLE = True
 except ImportError:
     Presentation = None
+    PPTX_AVAILABLE = False
 
 
 class FileTextExtractor:
@@ -38,10 +42,10 @@ class FileTextExtractor:
 
     SUPPORTED_EXTENSIONS = {
         '.txt', '.text',
-        '.docx', '.doc',
+        '.docx',
         '.pdf',
         '.xlsx', '.xls',
-        '.pptx', '.ppt',
+        '.pptx',
         '.csv',
         '.md', '.markdown',
         '.rtf',
@@ -104,7 +108,7 @@ class FileTextExtractor:
                 return cls._extract_from_pdf(file_path)
             elif extension in ['.xlsx', '.xls']:
                 return cls._extract_from_excel(file_path)
-            elif extension in ['.pptx', '.ppt']:
+            elif extension in ['.pptx']:
                 return cls._extract_from_powerpoint(file_path)
             elif extension == '.csv':
                 return cls._extract_from_csv(file_path)
@@ -123,8 +127,14 @@ class FileTextExtractor:
             with open(file_path, 'rb') as file:
                 raw_data = file.read(10000)  # Читаем первые 10KB
                 result = chardet.detect(raw_data)
-                return result.get('encoding', 'utf-8') or 'utf-8'
-        except:
+                encoding = result.get('encoding', 'utf-8')
+                if encoding is None:
+                    encoding = 'utf-8'
+                # Проверяем на популярные кодировки
+                if encoding.lower() in ['windows-1251', 'cp1251']:
+                    return 'windows-1251'
+                return encoding
+        except Exception:
             return 'utf-8'
 
     @classmethod
@@ -133,13 +143,20 @@ class FileTextExtractor:
         try:
             encoding = cls._detect_encoding(file_path)
 
-            with open(file_path, 'r', encoding=encoding, errors='ignore') as file:
-                content = file.read()
+            # Пробуем разные кодировки
+            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251', 'latin-1']
 
-            if not content.strip():
-                return None, "Файл пустой или содержит только пробелы"
+            for enc in encodings_to_try:
+                try:
+                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                        content = file.read()
 
-            return content, None
+                    if content.strip():
+                        return content, None
+                except UnicodeDecodeError:
+                    continue
+
+            return None, "Не удалось определить кодировку файла"
 
         except Exception as e:
             return None, f"Ошибка чтения текстового файла: {str(e)}"
@@ -147,8 +164,8 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_docx(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла Word (.docx)"""
-        if not docx:
-            return None, "Библиотека python-docx не установлена"
+        if not DOCX_AVAILABLE:
+            return None, "Для работы с .docx файлами установите библиотеку: pip install python-docx"
 
         try:
             doc = docx.Document(file_path)
@@ -181,8 +198,8 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_pdf(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из PDF файла"""
-        if not PyPDF2:
-            return None, "Библиотека PyPDF2 не установлена"
+        if not PDF_AVAILABLE:
+            return None, "Для работы с PDF файлами установите библиотеку: pip install PyPDF2"
 
         try:
             with open(file_path, 'rb') as file:
@@ -197,7 +214,7 @@ class FileTextExtractor:
                         text = page.extract_text()
                         if text.strip():
                             pages_text.append(text.strip())
-                    except:
+                    except Exception:
                         continue  # Пропускаем проблемные страницы
 
                 content = '\n\n'.join(pages_text)
@@ -213,53 +230,30 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_excel(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла Excel"""
+        if not EXCEL_AVAILABLE:
+            return None, "Для работы с Excel файлами установите библиотеку: pip install openpyxl"
+
         try:
-            # Пробуем openpyxl для .xlsx
-            if Path(file_path).suffix.lower() == '.xlsx' and openpyxl:
-                workbook = openpyxl.load_workbook(file_path, data_only=True)
-                sheets_text = []
+            # Используем openpyxl для .xlsx и .xls
+            workbook = openpyxl.load_workbook(file_path, data_only=True, read_only=True)
+            sheets_text = []
 
-                for sheet_name in workbook.sheetnames:
-                    sheet = workbook[sheet_name]
-                    sheet_text = []
+            for sheet_name in workbook.sheetnames:
+                sheet = workbook[sheet_name]
+                sheet_text = []
 
-                    for row in sheet.iter_rows():
-                        row_text = []
-                        for cell in row:
-                            if cell.value is not None:
-                                row_text.append(str(cell.value))
-                        if row_text:
-                            sheet_text.append(' | '.join(row_text))
+                for row in sheet.iter_rows(values_only=True):
+                    row_text = []
+                    for cell_value in row:
+                        if cell_value is not None:
+                            row_text.append(str(cell_value))
+                    if row_text:
+                        sheet_text.append(' | '.join(row_text))
 
-                    if sheet_text:
-                        sheets_text.append(f"=== Лист: {sheet_name} ===\n" + '\n'.join(sheet_text))
+                if sheet_text:
+                    sheets_text.append(f"=== Лист: {sheet_name} ===\n" + '\n'.join(sheet_text))
 
-                content = '\n\n'.join(sheets_text)
-
-            # Пробуем xlrd для .xls
-            elif Path(file_path).suffix.lower() == '.xls' and xlrd:
-                workbook = xlrd.open_workbook(file_path)
-                sheets_text = []
-
-                for sheet_name in workbook.sheet_names():
-                    sheet = workbook.sheet_by_name(sheet_name)
-                    sheet_text = []
-
-                    for row_idx in range(sheet.nrows):
-                        row_text = []
-                        for col_idx in range(sheet.ncols):
-                            cell_value = sheet.cell(row_idx, col_idx).value
-                            if cell_value:
-                                row_text.append(str(cell_value))
-                        if row_text:
-                            sheet_text.append(' | '.join(row_text))
-
-                    if sheet_text:
-                        sheets_text.append(f"=== Лист: {sheet_name} ===\n" + '\n'.join(sheet_text))
-
-                content = '\n\n'.join(sheets_text)
-            else:
-                return None, "Библиотеки для работы с Excel не установлены"
+            content = '\n\n'.join(sheets_text)
 
             if not content.strip():
                 return None, "Excel файл не содержит данных"
@@ -272,8 +266,8 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_powerpoint(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла PowerPoint"""
-        if not Presentation:
-            return None, "Библиотека python-pptx не установлена"
+        if not PPTX_AVAILABLE:
+            return None, "Для работы с PowerPoint файлами установите библиотеку: pip install python-pptx"
 
         try:
             prs = Presentation(file_path)
@@ -305,8 +299,18 @@ class FileTextExtractor:
         try:
             encoding = cls._detect_encoding(file_path)
 
-            with open(file_path, 'r', encoding=encoding, errors='ignore') as file:
-                lines = file.readlines()
+            # Пробуем разные кодировки для CSV
+            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251']
+
+            for enc in encodings_to_try:
+                try:
+                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                        lines = file.readlines()
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                return None, "Не удалось прочитать CSV файл"
 
             if not lines:
                 return None, "CSV файл пустой"
@@ -325,8 +329,17 @@ class FileTextExtractor:
         try:
             encoding = cls._detect_encoding(file_path)
 
-            with open(file_path, 'r', encoding=encoding, errors='ignore') as file:
-                content = file.read()
+            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251']
+
+            for enc in encodings_to_try:
+                try:
+                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                        content = file.read()
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                return None, "Не удалось прочитать HTML/XML файл"
 
             # Простое удаление HTML тегов
             import re
@@ -406,7 +419,7 @@ class DocumentFileService:
                 # Удаляем временный файл
                 try:
                     os.unlink(temp_file_path)
-                except:
+                except Exception:
                     pass
 
         except Exception as e:
@@ -414,8 +427,6 @@ class DocumentFileService:
 
     def _save_temp_file(self, uploaded_file) -> str:
         """Сохранение временного файла для обработки"""
-        import tempfile
-
         # Создаем временный файл с правильным расширением
         file_extension = Path(uploaded_file.name).suffix
         temp_file = tempfile.NamedTemporaryFile(
@@ -438,6 +449,14 @@ class DocumentFileService:
             (success, error_message)
         """
         try:
+            # Проверяем размер файла
+            if uploaded_file.size > self.extractor.MAX_FILE_SIZE:
+                return False, f"Файл слишком большой (максимум {self.extractor.MAX_FILE_SIZE // (1024 * 1024)}MB)"
+
+            # Проверяем тип файла
+            if not self.extractor.is_supported_file(uploaded_file.name):
+                return False, f"Неподдерживаемый тип файла: {Path(uploaded_file.name).suffix}"
+
             # Сохраняем временный файл
             temp_file_path = self._save_temp_file(uploaded_file)
 
@@ -462,8 +481,21 @@ class DocumentFileService:
                 # Удаляем временный файл
                 try:
                     os.unlink(temp_file_path)
-                except:
+                except Exception:
                     pass
 
         except Exception as e:
             return False, f"Ошибка при обновлении документа: {str(e)}"
+
+    def get_supported_formats_info(self) -> dict:
+        """Получение информации о поддерживаемых форматах"""
+        return {
+            'extensions': list(self.extractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': self.extractor.MAX_FILE_SIZE // (1024 * 1024),
+            'available_extractors': {
+                'docx': DOCX_AVAILABLE,
+                'pdf': PDF_AVAILABLE,
+                'excel': EXCEL_AVAILABLE,
+                'powerpoint': PPTX_AVAILABLE,
+            }
+        }
