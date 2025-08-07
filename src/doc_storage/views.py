@@ -17,6 +17,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 import json
 from typing import Any, Dict, List
 from collections import Counter
+from pathlib import Path
 import re
 
 from .models import Document, DocumentCategory, DocumentTag, SearchHistory, WordMatch, DocumentTagRelation
@@ -302,41 +303,6 @@ class WordSearchView(DetailView):
     template_name = 'doc_storage/word_search.html'
     context_object_name = 'document'
 
-    def get_context_data(self, **kwargs) -> Dict[str, Any]:
-        """Добавление контекста для поиска слов"""
-        context = super().get_context_data(**kwargs)
-        document = self.get_object()
-
-        query = self.request.GET.get('q', '')
-        search_type = self.request.GET.get('type', 'combined')
-
-        if query:
-            from search_service.algorithms import WordSearchService
-            search_service = WordSearchService()
-            matches, search_time = search_service.search_words_in_document(
-                document=document,
-                query=query,
-                search_type=search_type,
-                user=self.request.user if self.request.user.is_authenticated else None,
-                ip_address=self.request.META.get('REMOTE_ADDR')
-            )
-
-            word_matches = search_service.get_search_results(document, query)
-            context['word_matches'] = word_matches
-            context['search_time'] = search_time
-            context['total_matches'] = len(matches)
-
-        context['query'] = query
-        context['search_type'] = search_type
-        return context
-
-
-class WordSearchView(DetailView):
-    """Класс для поиска слов в документе"""
-    model = Document
-    template_name = 'doc_storage/word_search.html'
-    context_object_name = 'document'
-
     def get_queryset(self):
         """Ограничение только активными документами"""
         return Document.objects.filter(is_active=True).select_related('author', 'category')
@@ -547,7 +513,7 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(stats)
 
 
-# Новые представления для загрузки файлов
+# Представления для загрузки файлов
 
 class DocumentUploadView(LoginRequiredMixin, CreateView):
     """Представление для загрузки документа из файла"""
@@ -655,6 +621,18 @@ class DocumentReplaceFileView(LoginRequiredMixin, UpdateView):
     def get_queryset(self):
         """Ограничение замены файлов только в своих документах"""
         return Document.objects.filter(author=self.request.user)
+
+    def get_form(self, form_class=None):
+        """Переопределяем метод для работы с формой файла"""
+        if form_class is None:
+            form_class = self.get_form_class()
+
+        # Для GET запроса возвращаем пустую форму
+        if self.request.method == 'GET':
+            return form_class()
+
+        # Для POST запроса передаем данные и файлы
+        return form_class(data=self.request.POST, files=self.request.FILES)
 
     def form_valid(self, form):
         """Обработка замены файла"""

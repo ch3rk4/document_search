@@ -1,4 +1,6 @@
 import json
+
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -86,21 +88,30 @@ class DocumentAPITest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('suggestions', response.data)
 
-    def test_document_create_api_authenticated(self):
-        """Тест создания документа через API (авторизованный пользователь)"""
+    def test_document_create_api_with_file_upload(self):
+        """Тест создания документа через API с загрузкой файла"""
         self.client.force_authenticate(user=self.user)
 
-        url = reverse('doc_storage:document-list')
+        # Создаем тестовый файл
+        test_content = "Содержимое тестового файла с python программированием"
+        test_file = SimpleUploadedFile(
+            "test_document.txt",
+            test_content.encode('utf-8'),
+            content_type="text/plain"
+        )
+
+        url = reverse('doc_storage:upload_file_api')
         data = {
-            'title': 'Новый документ',
-            'content': 'Содержимое нового документа с ключевыми словами python разработка',
+            'file': test_file,
+            'title': 'Документ из файла',
             'category_id': self.category.id
         }
-        response = self.client.post(url, data, format='json')
+        response = self.client.post(url, data, format='multipart')
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['title'], data['title'])
+        self.assertEqual(response.data['title'], 'Документ из файла')
         self.assertEqual(response.data['author']['username'], self.user.username)
+        self.assertIn('python программированием', response.data['content'])
 
     def test_document_create_api_unauthenticated(self):
         """Тест создания документа без авторизации"""

@@ -4,8 +4,18 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="new migrate">
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fixes">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/file_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/document_search/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/document_search/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/doc_storage/document_list.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/doc_storage/document_list.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/templates/doc_storage/document_upload.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/doc_storage/document_upload.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,15 +26,15 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Dockerfile" />
-        <option value="Python Script" />
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="day_2" />
+        <entry key="$PROJECT_DIR$" value="day_4" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -50,16 +60,16 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;Python tests.Python tests for test_models.DocumentModelTest.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor&quot;: &quot;Run&quot;,
-    &quot;Python.run_tests.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;day__4&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Python tests.Python tests for test_models.DocumentModelTest.executor": "Run",
+    "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
+    "Python.run_tests.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "day__5"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
       <recent name="C:\Users\petys\PycharmProjects\document_search" />
@@ -289,7 +299,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754558739725</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="fixes">
+      <option name="closed" value="true" />
+      <created>1754559287334</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1754559287336</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -305,12 +323,12 @@
     <MESSAGE value="create migrations" />
     <MESSAGE value="create admin" />
     <MESSAGE value="create tests" />
-    <MESSAGE value="fixes" />
     <MESSAGE value="fixes of tests" />
     <MESSAGE value="create web" />
     <MESSAGE value="configurate docker" />
     <MESSAGE value="rework" />
     <MESSAGE value="new migrate" />
-    <option name="LAST_COMMIT_MESSAGE" value="new migrate" />
+    <MESSAGE value="fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixes" />
   </component>
 </project>
