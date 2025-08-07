@@ -1,15 +1,14 @@
 import re
 import time
 from typing import List, Dict, Set, Tuple, Optional
-from django.db.models import QuerySet, Q, Count
-from django.db.models.functions import Length
-from doc_storage.models import Document, SearchHistory
+from django.db.models import QuerySet
+from doc_storage.models import Document, WordMatch, SearchHistory
 from collections import defaultdict
 import difflib
 
 
-class SearchAlgorithms:
-    """Класс с алгоритмами поиска по документам"""
+class TextSearchAlgorithms:
+    """Класс с алгоритмами поиска слов внутри текста"""
 
     @staticmethod
     def normalize_text(text: str) -> str:
@@ -23,266 +22,386 @@ class SearchAlgorithms:
         return text
 
     @staticmethod
-    def create_word_index(documents: QuerySet[Document]) -> Dict[str, Set[int]]:
-        """Создание инвертированного индекса слов"""
-        word_index = defaultdict(set)
+    def build_failure_function(pattern: str) -> List[int]:
+        """Построение функции отказа для алгоритма КМП"""
+        m = len(pattern)
+        failure = [0] * m
+        j = 0
 
-        for doc in documents:
-            normalized_content = SearchAlgorithms.normalize_text(doc.content)
-            normalized_title = SearchAlgorithms.normalize_text(doc.title)
+        for i in range(1, m):
+            while j > 0 and pattern[i] != pattern[j]:
+                j = failure[j - 1]
+            if pattern[i] == pattern[j]:
+                j += 1
+            failure[i] = j
 
-            # Индексация слов из заголовка (с повышенным весом)
-            for word in normalized_title.split():
-                if len(word) > 2:  # Игнорируем слова короче 3 символов
-                    word_index[word].add(doc.id)
-
-            # Индексация слов из содержимого
-            for word in normalized_content.split():
-                if len(word) > 2:
-                    word_index[word].add(doc.id)
-
-        return dict(word_index)
+        return failure
 
     @staticmethod
-    def substring_search(query: str, documents: QuerySet[Document]) -> List[Dict]:
-        """Поиск по подстрокам с использованием алгоритма Boyer-Moore"""
-        start_time = time.time()
-        normalized_query = SearchAlgorithms.normalize_text(query)
-        results = []
+    def kmp_search(text: str, pattern: str) -> List[int]:
+        """Поиск всех вхождений паттерна в тексте используя алгоритм Кнута-Морриса-Пратта"""
+        if not pattern:
+            return []
 
-        for doc in documents:
-            normalized_content = SearchAlgorithms.normalize_text(doc.content)
-            normalized_title = SearchAlgorithms.normalize_text(doc.title)
+        n, m = len(text), len(pattern)
+        if m > n:
+            return []
 
-            # Подсчет совпадений в заголовке и тексте
-            title_matches = SearchAlgorithms._count_substring_matches(normalized_query, normalized_title)
-            content_matches = SearchAlgorithms._count_substring_matches(normalized_query, normalized_content)
+        failure = TextSearchAlgorithms.build_failure_function(pattern)
+        matches = []
+        j = 0
 
-            if title_matches > 0 or content_matches > 0:
-                # Расчет релевантности (заголовок имеет больший вес)
-                relevance_score = title_matches * 2 + content_matches
+        for i in range(n):
+            while j > 0 and text[i] != pattern[j]:
+                j = failure[j - 1]
+            if text[i] == pattern[j]:
+                j += 1
+            if j == m:
+                matches.append(i - m + 1)
+                j = failure[j - 1]
 
-                results.append({
-                    'document': doc,
-                    'relevance_score': relevance_score,
-                    'title_matches': title_matches,
-                    'content_matches': content_matches,
-                    'preview': SearchAlgorithms._create_preview(normalized_content, normalized_query)
-                })
-
-        # Сортировка по релевантности
-        results.sort(key=lambda x: x['relevance_score'], reverse=True)
-
-        search_time = time.time() - start_time
-        return results, search_time
+        return matches
 
     @staticmethod
-    def _count_substring_matches(query: str, text: str) -> int:
-        """Подсчет количества вхождений подстроки в тексте"""
-        count = 0
-        start = 0
-        while True:
-            pos = text.find(query, start)
-            if pos == -1:
-                break
-            count += 1
-            start = pos + 1
-        return count
+    def boyer_moore_search(text: str, pattern: str) -> List[int]:
+        """Поиск всех вхождений паттерна используя упрощенный алгоритм Бойера-Мура"""
+        if not pattern:
+            return []
 
-    @staticmethod
-    def _create_preview(content: str, query: str, preview_length: int = 150) -> str:
-        """Создание превью с выделенным найденным текстом"""
-        pos = content.find(query)
-        if pos == -1:
-            return content[:preview_length] + "..." if len(content) > preview_length else content
+        n, m = len(text), len(pattern)
+        if m > n:
+            return []
 
-        # Определяем границы превью
-        start = max(0, pos - preview_length // 2)
-        end = min(len(content), pos + len(query) + preview_length // 2)
+        # Создание таблицы плохого символа
+        bad_char = {}
+        for i in range(m):
+            bad_char[pattern[i]] = i
 
-        preview = content[start:end]
-        if start > 0:
-            preview = "..." + preview
-        if end < len(content):
-            preview = preview + "..."
+        matches = []
+        shift = 0
 
-        return preview
+        while shift <= n - m:
+            j = m - 1
 
-    @staticmethod
-    def fuzzy_search(query: str, documents: QuerySet[Document], threshold: float = 0.6) -> List[Dict]:
-        """Нечеткий поиск с использованием алгоритма Левенштейна"""
-        start_time = time.time()
-        normalized_query = SearchAlgorithms.normalize_text(query)
-        query_words = normalized_query.split()
-        results = []
+            # Сравнение справа налево
+            while j >= 0 and pattern[j] == text[shift + j]:
+                j -= 1
 
-        for doc in documents:
-            normalized_content = SearchAlgorithms.normalize_text(doc.content)
-            normalized_title = SearchAlgorithms.normalize_text(doc.title)
-
-            # Проверка совпадений в заголовке
-            title_score = SearchAlgorithms._calculate_fuzzy_score(query_words, normalized_title.split(), threshold)
-
-            # Проверка совпадений в содержимом
-            content_score = SearchAlgorithms._calculate_fuzzy_score(query_words, normalized_content.split(), threshold)
-
-            total_score = title_score * 2 + content_score  # Заголовок важнее
-
-            if total_score > 0:
-                results.append({
-                    'document': doc,
-                    'relevance_score': total_score,
-                    'title_score': title_score,
-                    'content_score': content_score,
-                    'preview': SearchAlgorithms._create_preview(normalized_content, normalized_query)
-                })
-
-        # Сортировка по релевантности
-        results.sort(key=lambda x: x['relevance_score'], reverse=True)
-
-        search_time = time.time() - start_time
-        return results, search_time
-
-    @staticmethod
-    def _calculate_fuzzy_score(query_words: List[str], text_words: List[str], threshold: float) -> float:
-        """Расчет нечеткого соответствия между словами запроса и текста"""
-        total_score = 0.0
-
-        for query_word in query_words:
-            best_match_score = 0.0
-
-            for text_word in text_words:
-                # Используем SequenceMatcher для расчета похожести
-                similarity = difflib.SequenceMatcher(None, query_word, text_word).ratio()
-
-                if similarity >= threshold:
-                    best_match_score = max(best_match_score, similarity)
-
-            total_score += best_match_score
-
-        return total_score / len(query_words) if query_words else 0.0
-
-    @staticmethod
-    def combined_search(query: str, documents: QuerySet[Document]) -> List[Dict]:
-        """Комбинированный поиск (точный + нечеткий + подстроки)"""
-        start_time = time.time()
-
-        # Выполняем разные типы поиска
-        exact_results, _ = SearchAlgorithms.exact_word_search(query, documents)
-        substring_results, _ = SearchAlgorithms.substring_search(query, documents)
-        fuzzy_results, _ = SearchAlgorithms.fuzzy_search(query, documents)
-
-        # Объединяем результаты и убираем дублирование
-        combined_results = {}
-
-        # Добавляем результаты точного поиска с максимальным весом
-        for result in exact_results:
-            doc_id = result['document'].id
-            combined_results[doc_id] = result
-            combined_results[doc_id]['search_type'] = 'exact'
-            combined_results[doc_id]['final_score'] = result['relevance_score'] * 3
-
-        # Добавляем результаты поиска по подстрокам
-        for result in substring_results:
-            doc_id = result['document'].id
-            if doc_id in combined_results:
-                combined_results[doc_id]['final_score'] += result['relevance_score'] * 2
+            if j < 0:
+                matches.append(shift)
+                # Сдвиг до следующего возможного совпадения
+                shift += m - bad_char.get(text[shift + m], -1) - 1 if shift + m < n else 1
             else:
-                combined_results[doc_id] = result
-                combined_results[doc_id]['search_type'] = 'substring'
-                combined_results[doc_id]['final_score'] = result['relevance_score'] * 2
+                # Сдвиг основанный на правиле плохого символа
+                shift += max(1, j - bad_char.get(text[shift + j], -1))
 
-        # Добавляем результаты нечеткого поиска
-        for result in fuzzy_results:
-            doc_id = result['document'].id
-            if doc_id in combined_results:
-                combined_results[doc_id]['final_score'] += result['relevance_score']
-            else:
-                combined_results[doc_id] = result
-                combined_results[doc_id]['search_type'] = 'fuzzy'
-                combined_results[doc_id]['final_score'] = result['relevance_score']
-
-        # Сортируем по финальному рейтингу
-        final_results = list(combined_results.values())
-        final_results.sort(key=lambda x: x['final_score'], reverse=True)
-
-        search_time = time.time() - start_time
-        return final_results, search_time
+        return matches
 
     @staticmethod
-    def exact_word_search(query: str, documents: QuerySet[Document]) -> List[Dict]:
-        """Точный поиск по словам"""
-        start_time = time.time()
-        normalized_query = SearchAlgorithms.normalize_text(query)
-        query_words = set(normalized_query.split())
-        results = []
+    def rabin_karp_search(text: str, pattern: str, prime: int = 101) -> List[int]:
+        """Поиск всех вхождений паттерна используя алгоритм Рабина-Карпа"""
+        if not pattern:
+            return []
 
-        for doc in documents:
-            normalized_content = SearchAlgorithms.normalize_text(doc.content)
-            normalized_title = SearchAlgorithms.normalize_text(doc.title)
+        n, m = len(text), len(pattern)
+        if m > n:
+            return []
 
-            title_words = set(normalized_title.split())
-            content_words = set(normalized_content.split())
+        base = 256
+        pattern_hash = 0
+        text_hash = 0
+        h = 1
+        matches = []
 
-            # Подсчет точных совпадений
-            title_matches = len(query_words.intersection(title_words))
-            content_matches = len(query_words.intersection(content_words))
+        # Вычисление h = pow(base, m-1) % prime
+        for i in range(m - 1):
+            h = (h * base) % prime
 
-            if title_matches > 0 or content_matches > 0:
-                relevance_score = title_matches * 2 + content_matches
+        # Вычисление хеша паттерна и первого окна текста
+        for i in range(m):
+            pattern_hash = (base * pattern_hash + ord(pattern[i])) % prime
+            text_hash = (base * text_hash + ord(text[i])) % prime
 
-                results.append({
-                    'document': doc,
-                    'relevance_score': relevance_score,
-                    'title_matches': title_matches,
-                    'content_matches': content_matches,
-                    'preview': SearchAlgorithms._create_preview(normalized_content, normalized_query)
+        # Проход по тексту
+        for i in range(n - m + 1):
+            # Проверка хешей
+            if pattern_hash == text_hash:
+                # Проверка символов
+                if text[i:i + m] == pattern:
+                    matches.append(i)
+
+            # Вычисление хеша следующего окна
+            if i < n - m:
+                text_hash = (base * (text_hash - ord(text[i]) * h) + ord(text[i + m])) % prime
+                if text_hash < 0:
+                    text_hash += prime
+
+        return matches
+
+    @staticmethod
+    def fuzzy_search(text: str, pattern: str, max_distance: int = 2) -> List[Dict]:
+        """Нечеткий поиск с использованием расстояния Левенштейна"""
+        normalized_text = TextSearchAlgorithms.normalize_text(text)
+        normalized_pattern = TextSearchAlgorithms.normalize_text(pattern)
+
+        words = normalized_text.split()
+        matches = []
+
+        for i, word in enumerate(words):
+            # Вычисляем позицию слова в исходном тексте
+            position = sum(len(w) + 1 for w in words[:i])
+
+            # Вычисляем расстояние Левенштейна
+            distance = difflib.SequenceMatcher(None, normalized_pattern, word).ratio()
+
+            if distance >= (1 - max_distance / len(normalized_pattern)):
+                matches.append({
+                    'word': word,
+                    'position': position,
+                    'distance': 1 - distance,
+                    'similarity': distance
                 })
 
-        results.sort(key=lambda x: x['relevance_score'], reverse=True)
-        search_time = time.time() - start_time
-        return results, search_time
+        return sorted(matches, key=lambda x: x['similarity'], reverse=True)
+
+    @staticmethod
+    def get_context(text: str, position: int, word_length: int, context_size: int = 50) -> Tuple[str, str]:
+        """Получение контекста вокруг найденного слова"""
+        start_context = max(0, position - context_size)
+        end_context = min(len(text), position + word_length + context_size)
+
+        context_before = text[start_context:position].strip()
+        context_after = text[position + word_length:end_context].strip()
+
+        return context_before, context_after
+
+    @staticmethod
+    def word_boundary_search(text: str, pattern: str) -> List[int]:
+        """Поиск по границам слов"""
+        pattern_regex = r'\b' + re.escape(pattern) + r'\b'
+        matches = []
+
+        for match in re.finditer(pattern_regex, text, re.IGNORECASE):
+            matches.append(match.start())
+
+        return matches
 
 
-class SearchService:
-    """Сервис для работы с поиском документов"""
+class WordSearchService:
+    """Сервис для поиска слов внутри документов"""
 
     def __init__(self):
-        self.algorithms = SearchAlgorithms()
+        self.algorithms = TextSearchAlgorithms()
 
-    def search_documents(
+    def search_words_in_document(
             self,
+            document: Document,
             query: str,
             search_type: str = 'combined',
             user=None,
             ip_address: Optional[str] = None
     ) -> Tuple[List[Dict], float]:
-        """Основной метод поиска документов"""
+        """Основной метод поиска слов в документе"""
 
-        if not query or len(query.strip()) < 2:
+        if not query or len(query.strip()) < 1:
             return [], 0.0
 
-        # Получаем активные документы
-        documents = Document.objects.filter(is_active=True).select_related('category', 'author')
+        start_time = time.time()
 
-        # Выбираем алгоритм поиска
-        if search_type == 'exact':
-            results, search_time = self.algorithms.exact_word_search(query, documents)
-        elif search_type == 'substring':
-            results, search_time = self.algorithms.substring_search(query, documents)
-        elif search_type == 'fuzzy':
-            results, search_time = self.algorithms.fuzzy_search(query, documents)
-        else:  # combined
-            results, search_time = self.algorithms.combined_search(query, documents)
+        # Очищаем старые результаты для этого документа и запроса
+        WordMatch.objects.filter(document=document, query=query).delete()
+
+        # Нормализуем запрос и текст
+        normalized_query = self.algorithms.normalize_text(query)
+        normalized_content = self.algorithms.normalize_text(document.content)
+
+        all_matches = []
+
+        if search_type in ['exact', 'combined']:
+            exact_matches = self._exact_word_search(document, normalized_content, normalized_query)
+            all_matches.extend(exact_matches)
+
+        if search_type in ['partial', 'combined']:
+            partial_matches = self._partial_word_search(document, normalized_content, normalized_query)
+            all_matches.extend(partial_matches)
+
+        if search_type in ['fuzzy', 'combined']:
+            fuzzy_matches = self._fuzzy_word_search(document, normalized_content, normalized_query)
+            all_matches.extend(fuzzy_matches)
+
+        # Удаляем дубликаты и сортируем по релевантности
+        unique_matches = self._remove_duplicates(all_matches)
+        unique_matches.sort(key=lambda x: (-x['relevance_score'], x['position']))
+
+        # Сохраняем результаты в базу данных
+        self._save_word_matches(document, query, unique_matches)
+
+        search_time = time.time() - start_time
 
         # Сохраняем историю поиска
-        self._save_search_history(query, len(results), search_time, user, ip_address)
+        self._save_search_history(query, document, len(unique_matches), search_time, user, ip_address)
 
-        return results, search_time
+        return unique_matches, search_time
+
+    def _exact_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+        """Точный поиск слов с использованием разных алгоритмов"""
+        matches = []
+
+        # KMP алгоритм
+        kmp_positions = self.algorithms.kmp_search(text, query)
+        for pos in kmp_positions:
+            context_before, context_after = self.algorithms.get_context(text, pos, len(query))
+            matches.append({
+                'document': document,
+                'query': query,
+                'matched_word': query,
+                'position': pos,
+                'context_before': context_before,
+                'context_after': context_after,
+                'match_type': 'exact',
+                'relevance_score': 1.0,
+                'algorithm': 'KMP'
+            })
+
+        # Поиск по границам слов (более точный для целых слов)
+        word_positions = self.algorithms.word_boundary_search(text, query)
+        for pos in word_positions:
+            context_before, context_after = self.algorithms.get_context(text, pos, len(query))
+            matches.append({
+                'document': document,
+                'query': query,
+                'matched_word': query,
+                'position': pos,
+                'context_before': context_before,
+                'context_after': context_after,
+                'match_type': 'exact',
+                'relevance_score': 1.2,  # Более высокий рейтинг для границ слов
+                'algorithm': 'Word Boundary'
+            })
+
+        return matches
+
+    def _partial_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+        """Поиск частей слов"""
+        matches = []
+
+        # Boyer-Moore для поиска подстрок
+        bm_positions = self.algorithms.boyer_moore_search(text, query)
+        for pos in bm_positions:
+            # Находим полное слово, содержащее найденную подстроку
+            word_start = pos
+            while word_start > 0 and text[word_start - 1].isalnum():
+                word_start -= 1
+
+            word_end = pos + len(query)
+            while word_end < len(text) and text[word_end].isalnum():
+                word_end += 1
+
+            matched_word = text[word_start:word_end]
+            context_before, context_after = self.algorithms.get_context(text, word_start, len(matched_word))
+
+            matches.append({
+                'document': document,
+                'query': query,
+                'matched_word': matched_word,
+                'position': word_start,
+                'context_before': context_before,
+                'context_after': context_after,
+                'match_type': 'partial',
+                'relevance_score': 0.8,
+                'algorithm': 'Boyer-Moore'
+            })
+
+        # Rabin-Karp для дополнительной проверки
+        rk_positions = self.algorithms.rabin_karp_search(text, query)
+        for pos in rk_positions:
+            word_start = pos
+            while word_start > 0 and text[word_start - 1].isalnum():
+                word_start -= 1
+
+            word_end = pos + len(query)
+            while word_end < len(text) and text[word_end].isalnum():
+                word_end += 1
+
+            matched_word = text[word_start:word_end]
+            context_before, context_after = self.algorithms.get_context(text, word_start, len(matched_word))
+
+            matches.append({
+                'document': document,
+                'query': query,
+                'matched_word': matched_word,
+                'position': word_start,
+                'context_before': context_before,
+                'context_after': context_after,
+                'match_type': 'partial',
+                'relevance_score': 0.7,
+                'algorithm': 'Rabin-Karp'
+            })
+
+        return matches
+
+    def _fuzzy_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+        """Нечеткий поиск слов"""
+        matches = []
+        fuzzy_results = self.algorithms.fuzzy_search(text, query, max_distance=2)
+
+        for result in fuzzy_results[:10]:  # Ограничиваем количество нечетких совпадений
+            context_before, context_after = self.algorithms.get_context(
+                text, result['position'], len(result['word'])
+            )
+
+            matches.append({
+                'document': document,
+                'query': query,
+                'matched_word': result['word'],
+                'position': result['position'],
+                'context_before': context_before,
+                'context_after': context_after,
+                'match_type': 'fuzzy',
+                'relevance_score': result['similarity'],
+                'algorithm': 'Fuzzy'
+            })
+
+        return matches
+
+    def _remove_duplicates(self, matches: List[Dict]) -> List[Dict]:
+        """Удаление дубликатов совпадений"""
+        seen = set()
+        unique_matches = []
+
+        for match in matches:
+            # Создаем ключ для уникальности на основе позиции и слова
+            key = (match['position'], match['matched_word'])
+
+            if key not in seen:
+                seen.add(key)
+                unique_matches.append(match)
+
+        return unique_matches
+
+    def _save_word_matches(self, document: Document, query: str, matches: List[Dict]) -> None:
+        """Сохранение найденных слов в базу данных"""
+        word_matches = []
+
+        for match in matches:
+            word_match = WordMatch(
+                document=document,
+                query=query,
+                matched_word=match['matched_word'],
+                position=match['position'],
+                context_before=match['context_before'][:200],
+                context_after=match['context_after'][:200],
+                match_type=match['match_type'],
+                relevance_score=match['relevance_score']
+            )
+            word_matches.append(word_match)
+
+        WordMatch.objects.bulk_create(word_matches)
 
     def _save_search_history(
             self,
             query: str,
+            document: Document,
             results_count: int,
             search_time: float,
             user=None,
@@ -291,15 +410,16 @@ class SearchService:
         """Сохранение истории поиска"""
         SearchHistory.objects.create(
             query=query,
+            document=document,
             user=user,
             results_count=results_count,
             search_time=search_time,
             ip_address=ip_address
         )
 
-    def get_popular_queries(self, limit: int = 10) -> QuerySet[SearchHistory]:
-        """Получение популярных поисковых запросов"""
-        return (SearchHistory.objects
-                .values('query')
-                .annotate(search_count=Count('query'))
-                .order_by('-search_count')[:limit])
+    def get_search_results(self, document: Document, query: str) -> QuerySet:
+        """Получение результатов поиска из базы данных"""
+        return WordMatch.objects.filter(
+            document=document,
+            query=query
+        ).order_by('-relevance_score', 'position')

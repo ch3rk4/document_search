@@ -13,50 +13,156 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from django_filters.rest_framework import DjangoFilterBackend
 import json
 from typing import Any, Dict, List
+from collections import Counter
+import re
 
-from .models import Document, DocumentCategory, DocumentTag, SearchHistory
+from .models import Document, DocumentCategory, DocumentTag, SearchHistory, WordMatch
 from .serializers import (
     DocumentSerializer, DocumentListSerializer, DocumentCategorySerializer,
-    DocumentTagSerializer, SearchResultSerializer, SearchHistorySerializer
+    DocumentTagSerializer, WordMatchSerializer, SearchHistorySerializer,
+    WordSearchResultSerializer, DocumentWordCloudSerializer, SearchStatisticsSerializer
 )
-from search_service.algorithms import SearchService
+from search_service.algorithms import WordSearchService
 
 
 # Function-Based Views (FBV)
 
 @api_view(['GET'])
-def search_documents_api(request: HttpRequest) -> Response:
-    """API функция для поиска документов"""
+def search_words_in_document_api(request: HttpRequest) -> Response:
+    """API функция для поиска слов в конкретном документе"""
+    document_id = request.GET.get('document_id')
     query = request.GET.get('q', '').strip()
     search_type = request.GET.get('type', 'combined')
+
+    if not document_id:
+        return Response({
+            'error': 'Параметр "document_id" обязателен'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     if not query:
         return Response({
             'error': 'Параметр запроса "q" обязателен'
         }, status=status.HTTP_400_BAD_REQUEST)
 
+    try:
+        document = Document.objects.get(id=document_id, is_active=True)
+    except Document.DoesNotExist:
+        return Response({
+            'error': 'Документ не найден'
+        }, status=status.HTTP_404_NOT_FOUND)
+
     # Получаем IP адрес пользователя
     ip_address = request.META.get('REMOTE_ADDR')
     user = request.user if request.user.is_authenticated else None
 
-    # Выполняем поиск
-    search_service = SearchService()
-    results, search_time = search_service.search_documents(
+    # Выполняем поиск слов в документе
+    search_service = WordSearchService()
+    matches, search_time = search_service.search_words_in_document(
+        document=document,
         query=query,
         search_type=search_type,
         user=user,
         ip_address=ip_address
     )
 
+    # Получаем сохраненные результаты из базы данных
+    word_matches = search_service.get_search_results(document, query)
+
+    # Определяем использованные алгоритмы
+    algorithms_used = list(set([match.get('algorithm', 'Unknown') for match in matches]))
+
     # Сериализуем результаты
-    serializer = SearchResultSerializer(results, many=True)
+    serializer = WordSearchResultSerializer({
+        'document': document,
+        'query': query,
+        'total_matches': len(matches),
+        'search_time': search_time,
+        'matches': word_matches,
+        'search_type': search_type,
+        'algorithms_used': algorithms_used
+    })
+
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_document_word_cloud(request: HttpRequest, document_id: int) -> Response:
+    """Получение облака слов для документа"""
+    try:
+        document = Document.objects.get(id=document_id, is_active=True)
+    except Document.DoesNotExist:
+        return Response({
+            'error': 'Документ не найден'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    # Анализируем текст документа
+    content = document.content.lower()
+    # Удаляем пунктуацию и разбиваем на слова
+    words = re.findall(r'\b[а-яё\w]+\b', content)
+
+    # Фильтруем стоп-слова (простой список)
+    stop_words = {'и', 'в', 'на', 'с', 'по', 'для', 'от', 'до', 'при', 'к', 'а', 'но', 'или', 'что', 'это', 'как',
+                  'так'}
+    filtered_words = [word for word in words if len(word) > 2 and word not in stop_words]
+
+    # Подсчитываем частоту
+    word_frequencies = dict(Counter(filtered_words).most_common(50))
+
+    serializer = DocumentWordCloudSerializer({
+        'document': document,
+        'word_frequencies': word_frequencies,
+        'total_unique_words': len(set(filtered_words))
+    })
+
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_search_suggestions(request: HttpRequest, document_id: int) -> Response:
+    """Получение поисковых подсказок на основе содержимого документа"""
+    query_prefix = request.GET.get('prefix', '').strip().lower()
+
+    if not query_prefix or len(query_prefix) < 2:
+        return Response({
+            'suggestions': []
+        })
+
+    try:
+        document = Document.objects.get(id=document_id, is_active=True)
+    except Document.DoesNotExist:
+        return Response({
+            'error': 'Документ не найден'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+    # Ищем слова, начинающиеся с префикса
+    content = document.content.lower()
+    words = re.findall(r'\b[а-яё\w]+\b', content)
+
+    # Фильтруем по префиксу
+    matching_words = [word for word in words if word.startswith(query_prefix)]
+    word_counts = Counter(matching_words)
+
+    # Создаем предложения с контекстом
+    suggestions = []
+    for word, frequency in word_counts.most_common(10):
+        # Находим контекст для слова
+        pattern = r'\b' + re.escape(word) + r'\b'
+        match = re.search(pattern, content)
+        context_preview = ""
+
+        if match:
+            start = max(0, match.start() - 30)
+            end = min(len(content), match.end() + 30)
+            context_preview = content[start:end].strip()
+
+        suggestions.append({
+            'word': word,
+            'frequency': frequency,
+            'context_preview': context_preview
+        })
 
     return Response({
-        'query': query,
-        'search_type': search_type,
-        'total_results': len(results),
-        'search_time': round(search_time, 4),
-        'results': serializer.data
+        'suggestions': suggestions
     })
 
 
@@ -93,18 +199,27 @@ def get_search_statistics(request: HttpRequest) -> Response:
                        .annotate(count=Count('query'))
                        .order_by('-count')[:10])
 
+    # Документы с наибольшим количеством поисков
+    popular_documents = (SearchHistory.objects
+                         .values('document__title', 'document__id')
+                         .annotate(search_count=Count('document'))
+                         .order_by('-search_count')[:10])
+
     # Общая статистика
     total_searches = SearchHistory.objects.count()
     total_documents = Document.objects.filter(is_active=True).count()
 
-    return Response({
+    serializer = SearchStatisticsSerializer({
         'total_searches': total_searches,
         'total_documents': total_documents,
-        'popular_queries': list(popular_queries),
         'average_search_time': SearchHistory.objects.aggregate(
             avg_time=Avg('search_time')
-        )['avg_time'] or 0
+        )['avg_time'] or 0,
+        'most_searched_words': list(popular_queries),
+        'documents_with_searches': list(popular_documents)
     })
+
+    return Response(serializer.data)
 
 
 # Class-Based Views (CBV)
@@ -165,8 +280,48 @@ class DocumentDetailView(DetailView):
             is_active=True
         ).exclude(id=document.id)[:5]
 
+        # Последние поиски в этом документе
+        recent_searches = SearchHistory.objects.filter(
+            document=document
+        ).order_by('-created_at')[:10]
+
         context['similar_documents'] = similar_documents
         context['document_tags'] = document.tag_relations.select_related('tag')
+        context['recent_searches'] = recent_searches
+        return context
+
+
+class WordSearchView(DetailView):
+    """Класс для поиска слов в документе"""
+    model = Document
+    template_name = 'doc_storage/word_search.html'
+    context_object_name = 'document'
+
+    def get_context_data(self, **kwargs) -> Dict[str, Any]:
+        """Добавление контекста для поиска слов"""
+        context = super().get_context_data(**kwargs)
+        document = self.get_object()
+
+        query = self.request.GET.get('q', '')
+        search_type = self.request.GET.get('type', 'combined')
+
+        if query:
+            search_service = WordSearchService()
+            matches, search_time = search_service.search_words_in_document(
+                document=document,
+                query=query,
+                search_type=search_type,
+                user=self.request.user if self.request.user.is_authenticated else None,
+                ip_address=self.request.META.get('REMOTE_ADDR')
+            )
+
+            word_matches = search_service.get_search_results(document, query)
+            context['word_matches'] = word_matches
+            context['search_time'] = search_time
+            context['total_matches'] = len(matches)
+
+        context['query'] = query
+        context['search_type'] = search_type
         return context
 
 
@@ -182,7 +337,7 @@ class SearchHistoryView(ListView):
         """Ограничение истории текущим пользователем"""
         return SearchHistory.objects.filter(
             user=self.request.user
-        ).order_by('-created_at')
+        ).select_related('document').order_by('-created_at')
 
 
 # Django REST Framework ViewSets
@@ -252,31 +407,62 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """Установка автора при создании документа"""
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['post'])
-    def toggle_active(self, request, pk=None):
-        """Переключение активности документа"""
+    @action(detail=True, methods=['get'])
+    def search_words(self, request, pk=None):
+        """Поиск слов в конкретном документе"""
         document = self.get_object()
-        document.is_active = not document.is_active
-        document.save()
+        query = request.query_params.get('q', '').strip()
+        search_type = request.query_params.get('type', 'combined')
 
-        return Response({
-            'id': document.id,
-            'is_active': document.is_active,
-            'message': f'Документ {"активирован" if document.is_active else "деактивирован"}'
+        if not query:
+            return Response({
+                'error': 'Параметр запроса "q" обязателен'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Выполняем поиск
+        search_service = WordSearchService()
+        matches, search_time = search_service.search_words_in_document(
+            document=document,
+            query=query,
+            search_type=search_type,
+            user=request.user if request.user.is_authenticated else None,
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+
+        word_matches = search_service.get_search_results(document, query)
+
+        serializer = WordSearchResultSerializer({
+            'document': document,
+            'query': query,
+            'total_matches': len(matches),
+            'search_time': search_time,
+            'matches': word_matches,
+            'search_type': search_type,
+            'algorithms_used': ['KMP', 'Boyer-Moore', 'Rabin-Karp', 'Fuzzy']
         })
 
-    @action(detail=False, methods=['get'])
-    def my_documents(self, request):
-        """Получение документов текущего пользователя"""
-        documents = self.get_queryset().filter(author=request.user)
-
-        page = self.paginate_queryset(documents)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-
-        serializer = self.get_serializer(documents, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def word_cloud(self, request, pk=None):
+        """Получение облака слов для документа"""
+        return get_document_word_cloud(request, pk)
+
+    @action(detail=True, methods=['get'])
+    def search_suggestions(self, request, pk=None):
+        """Получение поисковых подсказок"""
+        return get_search_suggestions(request, pk)
+
+
+class WordMatchViewSet(viewsets.ReadOnlyModelViewSet):
+    """ViewSet для найденных слов (только чтение)"""
+    queryset = WordMatch.objects.all()
+    serializer_class = WordMatchSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['document', 'query', 'match_type']
+    ordering_fields = ['position', 'relevance_score', 'created_at']
+    ordering = ['-relevance_score', 'position']
 
 
 class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -285,13 +471,13 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SearchHistorySerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['user']
+    filterset_fields = ['user', 'document']
     ordering_fields = ['created_at', 'search_time', 'results_count']
     ordering = ['-created_at']
 
     def get_queryset(self):
         """Ограничение истории текущим пользователем"""
-        return SearchHistory.objects.filter(user=self.request.user)
+        return SearchHistory.objects.filter(user=self.request.user).select_related('document')
 
     @action(detail=False, methods=['get'])
     def statistics(self, request):
@@ -303,8 +489,13 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
             'average_search_time': user_history.aggregate(
                 avg_time=Avg('search_time')
             )['avg_time'] or 0,
-            'most_searched_queries': user_history.values('query').annotate(
+            'most_searched_words': user_history.values('query').annotate(
                 count=Count('query')
+            ).order_by('-count')[:10],
+            'most_searched_documents': user_history.values(
+                'document__title', 'document__id'
+            ).annotate(
+                count=Count('document')
             ).order_by('-count')[:10]
         }
 
