@@ -47,24 +47,23 @@ services:
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
     volumes:
-      - ./src:/app/src
       - ./logs:/app/logs
       - ./media:/app/media
+      - ./src/staticfiles:/app/src/staticfiles
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/admin/login/" ]
+      test: ["CMD", "python", "src/manage.py", "check"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
     command: >
-      sh -c "cd src &&
-             mkdir -p ../media ../logs &&
-             pip install --no-cache-dir -r ../requirements.txt &&
+      sh -c "mkdir -p logs media src/staticfiles &&
+             cd src &&
              python manage.py migrate &&
              python manage.py collectstatic --noinput &&
              python ../scripts/load_test_data.py &&
@@ -81,6 +80,11 @@ services:
       - ./src/staticfiles:/app/staticfiles
     depends_on:
       - web
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   postgres_data:

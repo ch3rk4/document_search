@@ -91,6 +91,9 @@ class DocumentTagRelation(models.Model):
         verbose_name = "Связь документ-тег"
         verbose_name_plural = "Связи документов и тегов"
 
+    def __str__(self) -> str:
+        return f"{self.document.title} - {self.tag.name}"
+
 
 class WordMatch(models.Model):
     """Модель для хранения результатов поиска слов в документе"""

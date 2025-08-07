@@ -316,7 +316,6 @@ class WordSearchView(DetailView):
         search_type = self.request.GET.get('type', 'combined')
 
         if query:
-            from search_service.algorithms import WordSearchService
             search_service = WordSearchService()
             matches, search_time = search_service.search_words_in_document(
                 document=document,
