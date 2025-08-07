@@ -2,7 +2,6 @@ import re
 import time
 from typing import List, Dict, Set, Tuple, Optional
 from django.db.models import QuerySet
-from doc_storage.models import Document, WordMatch, SearchHistory
 from collections import defaultdict
 import difflib
 
@@ -154,7 +153,7 @@ class TextSearchAlgorithms:
             # Вычисляем расстояние Левенштейна
             distance = difflib.SequenceMatcher(None, normalized_pattern, word).ratio()
 
-            if distance >= (1 - max_distance / len(normalized_pattern)):
+            if distance >= (1 - max_distance / max(len(normalized_pattern), 1)):
                 matches.append({
                     'word': word,
                     'position': position,
@@ -195,7 +194,7 @@ class WordSearchService:
 
     def search_words_in_document(
             self,
-            document: Document,
+            document,
             query: str,
             search_type: str = 'combined',
             user=None,
@@ -208,8 +207,17 @@ class WordSearchService:
 
         start_time = time.time()
 
+        # Импортируем модели здесь, чтобы избежать циклических импортов
+        try:
+            from doc_storage.models import WordMatch, SearchHistory
+        except ImportError:
+            # Fallback если импорт не удался
+            WordMatch = None
+            SearchHistory = None
+
         # Очищаем старые результаты для этого документа и запроса
-        WordMatch.objects.filter(document=document, query=query).delete()
+        if WordMatch:
+            WordMatch.objects.filter(document=document, query=query).delete()
 
         # Нормализуем запрос и текст
         normalized_query = self.algorithms.normalize_text(query)
@@ -234,16 +242,18 @@ class WordSearchService:
         unique_matches.sort(key=lambda x: (-x['relevance_score'], x['position']))
 
         # Сохраняем результаты в базу данных
-        self._save_word_matches(document, query, unique_matches)
+        if WordMatch:
+            self._save_word_matches(document, query, unique_matches)
 
         search_time = time.time() - start_time
 
         # Сохраняем историю поиска
-        self._save_search_history(query, document, len(unique_matches), search_time, user, ip_address)
+        if SearchHistory:
+            self._save_search_history(query, document, len(unique_matches), search_time, user, ip_address)
 
         return unique_matches, search_time
 
-    def _exact_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+    def _exact_word_search(self, document, text: str, query: str) -> List[Dict]:
         """Точный поиск слов с использованием разных алгоритмов"""
         matches = []
 
@@ -281,7 +291,7 @@ class WordSearchService:
 
         return matches
 
-    def _partial_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+    def _partial_word_search(self, document, text: str, query: str) -> List[Dict]:
         """Поиск частей слов"""
         matches = []
 
@@ -340,7 +350,7 @@ class WordSearchService:
 
         return matches
 
-    def _fuzzy_word_search(self, document: Document, text: str, query: str) -> List[Dict]:
+    def _fuzzy_word_search(self, document, text: str, query: str) -> List[Dict]:
         """Нечеткий поиск слов"""
         matches = []
         fuzzy_results = self.algorithms.fuzzy_search(text, query, max_distance=2)
@@ -379,47 +389,63 @@ class WordSearchService:
 
         return unique_matches
 
-    def _save_word_matches(self, document: Document, query: str, matches: List[Dict]) -> None:
+    def _save_word_matches(self, document, query: str, matches: List[Dict]) -> None:
         """Сохранение найденных слов в базу данных"""
-        word_matches = []
+        try:
+            from doc_storage.models import WordMatch
 
-        for match in matches:
-            word_match = WordMatch(
-                document=document,
-                query=query,
-                matched_word=match['matched_word'],
-                position=match['position'],
-                context_before=match['context_before'][:200],
-                context_after=match['context_after'][:200],
-                match_type=match['match_type'],
-                relevance_score=match['relevance_score']
-            )
-            word_matches.append(word_match)
+            word_matches = []
 
-        WordMatch.objects.bulk_create(word_matches)
+            for match in matches:
+                word_match = WordMatch(
+                    document=document,
+                    query=query,
+                    matched_word=match['matched_word'],
+                    position=match['position'],
+                    context_before=match['context_before'][:200],
+                    context_after=match['context_after'][:200],
+                    match_type=match['match_type'],
+                    relevance_score=match['relevance_score']
+                )
+                word_matches.append(word_match)
+
+            WordMatch.objects.bulk_create(word_matches)
+        except Exception as e:
+            print(f"Ошибка сохранения совпадений: {e}")
 
     def _save_search_history(
             self,
             query: str,
-            document: Document,
+            document,
             results_count: int,
             search_time: float,
             user=None,
             ip_address: Optional[str] = None
     ) -> None:
         """Сохранение истории поиска"""
-        SearchHistory.objects.create(
-            query=query,
-            document=document,
-            user=user,
-            results_count=results_count,
-            search_time=search_time,
-            ip_address=ip_address
-        )
+        try:
+            from doc_storage.models import SearchHistory
 
-    def get_search_results(self, document: Document, query: str) -> QuerySet:
+            SearchHistory.objects.create(
+                query=query,
+                document=document,
+                user=user,
+                results_count=results_count,
+                search_time=search_time,
+                ip_address=ip_address
+            )
+        except Exception as e:
+            print(f"Ошибка сохранения истории поиска: {e}")
+
+    def get_search_results(self, document, query: str):
         """Получение результатов поиска из базы данных"""
-        return WordMatch.objects.filter(
-            document=document,
-            query=query
-        ).order_by('-relevance_score', 'position')
+        try:
+            from doc_storage.models import WordMatch
+
+            return WordMatch.objects.filter(
+                document=document,
+                query=query
+            ).order_by('-relevance_score', 'position')
+        except Exception as e:
+            print(f"Ошибка получения результатов поиска: {e}")
+            return []

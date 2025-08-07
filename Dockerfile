@@ -6,6 +6,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     curl \
+    gettext \
     && rm -rf /var/lib/apt/lists/*
 
 # Создание рабочей директории
@@ -21,13 +22,17 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Копирование исходного кода
 COPY . .
 
-# Создание необходимых директорий
-RUN mkdir -p logs media src/staticfiles
+# Создание необходимых директорий с правильными правами
+RUN mkdir -p logs media src/staticfiles && \
+    chmod 755 logs media src/staticfiles
 
 # Создание непривилегированного пользователя
-RUN adduser --disabled-password --gecos '' appuser && \
-    chown -R appuser:appuser /app
+RUN adduser --disabled-password --gecos '' appuser
 
+# Изменение владельца файлов после копирования
+RUN chown -R appuser:appuser /app
+
+# Переключение на непривилегированного пользователя
 USER appuser
 
 # Переменные окружения

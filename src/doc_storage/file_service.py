@@ -5,6 +5,7 @@ import os
 import mimetypes
 import chardet
 import tempfile
+import re
 from typing import Optional, Tuple
 from pathlib import Path
 
@@ -108,7 +109,7 @@ class FileTextExtractor:
                 return cls._extract_from_pdf(file_path)
             elif extension in ['.xlsx', '.xls']:
                 return cls._extract_from_excel(file_path)
-            elif extension in ['.pptx']:
+            elif extension == '.pptx':
                 return cls._extract_from_powerpoint(file_path)
             elif extension == '.csv':
                 return cls._extract_from_csv(file_path)
@@ -342,7 +343,6 @@ class FileTextExtractor:
                 return None, "Не удалось прочитать HTML/XML файл"
 
             # Простое удаление HTML тегов
-            import re
             text = re.sub(r'<[^>]+>', ' ', content)
             text = re.sub(r'\s+', ' ', text).strip()
 

@@ -2,6 +2,7 @@ import pytest
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.db import IntegrityError
 from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory, WordMatch
 
 
@@ -83,6 +84,18 @@ class DocumentModelTest(TestCase):
         self.assertGreater(document.word_count, initial_word_count)
         self.assertEqual(document.word_count, 9)
 
+    def test_document_with_file_path(self):
+        """Тест документа с файлом"""
+        document = Document.objects.create(
+            title='Документ с файлом',
+            content='Содержимое из файла',
+            file_path='documents/test.txt',
+            author=self.user
+        )
+
+        self.assertTrue(document.file_path)
+        self.assertEqual(str(document.file_path), 'documents/test.txt')
+
 
 class DocumentCategoryModelTest(TestCase):
     """Тесты для модели DocumentCategory"""
@@ -117,6 +130,11 @@ class DocumentCategoryModelTest(TestCase):
         self.assertEqual(categories[1].name, 'В_Средняя')
         self.assertEqual(categories[2].name, 'Я_Последняя')
 
+    def test_category_without_description(self):
+        """Тест создания категории без описания"""
+        category = DocumentCategory.objects.create(name='Без описания')
+        self.assertEqual(category.description, '')
+
 
 class DocumentTagModelTest(TestCase):
     """Тесты для модели DocumentTag"""
@@ -145,7 +163,7 @@ class DocumentTagModelTest(TestCase):
         """Тест уникальности имени тега"""
         DocumentTag.objects.create(name='python')
 
-        with self.assertRaises(Exception):  # IntegrityError в реальной БД
+        with self.assertRaises(IntegrityError):
             DocumentTag.objects.create(name='python')
 
 
@@ -260,6 +278,21 @@ class WordMatchModelTest(TestCase):
         self.assertEqual(partial_match.match_type, 'partial')
         self.assertEqual(fuzzy_match.match_type, 'fuzzy')
 
+    def test_word_match_context_truncation(self):
+        """Тест усечения контекста до 200 символов"""
+        long_context = 'a' * 300
+        word_match = WordMatch.objects.create(
+            document=self.document,
+            query='test',
+            matched_word='test',
+            position=0,
+            context_before=long_context,
+            context_after=long_context
+        )
+
+        self.assertEqual(len(word_match.context_before), 200)
+        self.assertEqual(len(word_match.context_after), 200)
+
 
 class SearchHistoryModelTest(TestCase):
     """Тесты для модели SearchHistory"""
@@ -341,6 +374,16 @@ class SearchHistoryModelTest(TestCase):
         self.assertEqual(histories[0], history2)
         self.assertEqual(histories[1], history1)
 
+    def test_search_history_ipv6_address(self):
+        """Тест с IPv6 адресом"""
+        history = SearchHistory.objects.create(
+            query='IPv6 тест',
+            document=self.document,
+            ip_address='2001:db8::1'
+        )
+
+        self.assertEqual(history.ip_address, '2001:db8::1')
+
 
 class DocumentTagRelationModelTest(TestCase):
     """Тесты для модели DocumentTagRelation"""
@@ -367,6 +410,17 @@ class DocumentTagRelationModelTest(TestCase):
 
         self.assertEqual(relation.document, self.document)
         self.assertEqual(relation.tag, self.tag)
+        self.assertIsNotNone(relation.created_at)
+
+    def test_document_tag_relation_str_method(self):
+        """Тест строкового представления связи"""
+        relation = DocumentTagRelation.objects.create(
+            document=self.document,
+            tag=self.tag
+        )
+
+        expected_str = f"{self.document.title} - {self.tag.name}"
+        self.assertEqual(str(relation), expected_str)
 
     def test_document_tag_relation_unique_together(self):
         """Тест уникальности связи документ-тег"""
@@ -375,7 +429,7 @@ class DocumentTagRelationModelTest(TestCase):
             tag=self.tag
         )
 
-        with self.assertRaises(Exception):  # IntegrityError в реальной БД
+        with self.assertRaises(IntegrityError):
             DocumentTagRelation.objects.create(
                 document=self.document,
                 tag=self.tag
@@ -425,3 +479,92 @@ class DocumentTagRelationModelTest(TestCase):
         document_titles = [relation.document.title for relation in tag_relations]
         self.assertIn('Документ 1', document_titles)
         self.assertIn('Документ 2', document_titles)
+
+    def test_cascade_deletion(self):
+        """Тест каскадного удаления"""
+        relation = DocumentTagRelation.objects.create(
+            document=self.document,
+            tag=self.tag
+        )
+
+        # Удаляем документ
+        self.document.delete()
+
+        # Связь должна быть удалена
+        self.assertFalse(DocumentTagRelation.objects.filter(id=relation.id).exists())
+
+        # Создаем новые объекты для тестирования удаления тега
+        new_document = Document.objects.create(
+            title='Новый документ',
+            content='Новое содержимое',
+            author=self.user
+        )
+        new_relation = DocumentTagRelation.objects.create(
+            document=new_document,
+            tag=self.tag
+        )
+
+        # Удаляем тег
+        self.tag.delete()
+
+        # Связь должна быть удалена
+        self.assertFalse(DocumentTagRelation.objects.filter(id=new_relation.id).exists())
+
+
+class ModelIntegrationTest(TestCase):
+    """Интеграционные тесты моделей"""
+
+    def setUp(self):
+        """Настройка тестовых данных"""
+        self.user = User.objects.create_user(
+            username='integrationuser',
+            password='testpass123'
+        )
+        self.category = DocumentCategory.objects.create(
+            name='Интеграционная категория'
+        )
+
+    def test_full_document_workflow(self):
+        """Тест полного рабочего процесса с документом"""
+        # Создаем документ
+        document = Document.objects.create(
+            title='Интеграционный тест',
+            content='Python программирование с алгоритмами поиска',
+            author=self.user,
+            category=self.category
+        )
+
+        # Добавляем теги
+        tag1 = DocumentTag.objects.create(name='python')
+        tag2 = DocumentTag.objects.create(name='алгоритмы')
+
+        DocumentTagRelation.objects.create(document=document, tag=tag1)
+        DocumentTagRelation.objects.create(document=document, tag=tag2)
+
+        # Создаем поиск
+        history = SearchHistory.objects.create(
+            query='python',
+            document=document,
+            user=self.user,
+            results_count=2
+        )
+
+        # Создаем совпадения
+        WordMatch.objects.create(
+            document=document,
+            query='python',
+            matched_word='Python',
+            position=0,
+            match_type='exact',
+            relevance_score=1.0
+        )
+
+        # Проверяем, что все связано правильно
+        self.assertEqual(document.tag_relations.count(), 2)
+        self.assertEqual(SearchHistory.objects.filter(document=document).count(), 1)
+        self.assertEqual(WordMatch.objects.filter(document=document).count(), 1)
+
+        # Проверяем обратные связи
+        self.assertEqual(tag1.document_relations.count(), 1)
+        self.assertEqual(self.category.document_set.count(), 1)
+        self.assertEqual(self.user.document_set.count(), 1)
