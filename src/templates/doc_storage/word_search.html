@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+
+{% block title %}Поиск слов в "{{ document.title }}" - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_list' %}">Документы</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'doc_storage:document_detail' document.pk %}">{{ document.title }}</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Поиск слов</li>
+            </ol>
+        </nav>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h2>Поиск слов в документе</h2>
+                <small class="text-muted">{{ document.title }}</small>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-6">
+                        <label for="q" class="form-label">Поисковый запрос:</label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="q" 
+                            name="q" 
+                            value="{{ query }}" 
+                            placeholder="Введите слово или часть слова для поиска"
+                            required
+                        >
+                        <div class="form-text">Можно искать целые слова или их части (например, "прог" найдет "программирование")</div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label for="type" class="form-label">Тип поиска:</label>
+                        <select class="form-select" id="type" name="type">
+                            <option value="combined" {% if search_type == 'combined' %}selected{% endif %}>Комбинированный</option>
+                            <option value="exact" {% if search_type == 'exact' %}selected{% endif %}>Точное совпадение</option>
+                            <option value="partial" {% if search_type == 'partial' %}selected{% endif %}>Частичное совпадение</option>
+                            <option value="fuzzy" {% if search_type == 'fuzzy' %}selected{% endif %}>Нечеткий поиск</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">
+                            <i class="fas fa-search"></i> Найти слова
+                        </button>
+                        <a href="{% url 'doc_storage:word_search' document.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Сбросить
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if query %}
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4>Результаты поиска</h4>
+                    <div class="search-stats">
+                        {% if word_matches %}
+                            Найдено: <strong>{{ total_matches }}</strong> совпадений
+                            | Время поиска: <strong>{{ search_time|floatformat:4 }}</strong> сек
+                        {% else %}
+                            Совпадений не найдено
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if word_matches %}
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                Запрос: "<strong>{{ query }}</strong>" | Тип поиска: <span class="badge bg-info">{{ search_type }}</span>
+                            </small>
+                        </div>
+
+                        <div class="row">
+                            {% for match in word_matches %}
+                                <div class="col-12 mb-3">
+                                    <div class="card border-start border-4 
+                                        {% if match.match_type == 'exact' %}border-success
+                                        {% elif match.match_type == 'partial' %}border-warning
+                                        {% else %}border-info{% endif %}">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-8">
+                                                    <h6 class="card-title mb-2">
+                                                        <span class="badge 
+                                                            {% if match.match_type == 'exact' %}bg-success
+                                                            {% elif match.match_type == 'partial' %}bg-warning
+                                                            {% else %}bg-info{% endif %}">
+                                                            {{ match.get_match_type_display }}
+                                                        </span>
+                                                        Найденное слово: <mark>{{ match.matched_word }}</mark>
+                                                    </h6>
+                                                    <p class="card-text">
+                                                        <small class="text-muted">{{ match.context_before }}</small>
+                                                        <strong class="text-primary">{{ match.matched_word }}</strong>
+                                                        <small class="text-muted">{{ match.context_after }}</small>
+                                                    </p>
+                                                </div>
+                                                <div class="col-md-4 text-end">
+                                                    <div class="mb-1">
+                                                        <small class="text-muted">Позиция: {{ match.position }}</small>
+                                                    </div>
+                                                    <div class="mb-1">
+                                                        <small class="text-muted">
+                                                            Релевантность: 
+                                                            <span class="badge bg-secondary">
+                                                                {{ match.relevance_score|floatformat:2 }}
+                                                            </span>
+                                                        </small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <h5>Совпадения не найдены</h5>
+                            <p>По вашему запросу "<strong>{{ query }}</strong>" в документе не найдено совпадений.</p>
+                            <hr>
+                            <p class="mb-0">
+                                <strong>Попробуйте:</strong>
+                                <ul class="mt-2">
+                                    <li>Изменить тип поиска на "Нечеткий поиск"</li>
+                                    <li>Использовать часть слова вместо целого слова</li>
+                                    <li>Проверить правильность написания</li>
+                                    <li>Использовать синонимы</li>
+                                </ul>
+                            </p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Информация о документе -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Содержимое документа</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        {% if query and word_matches %}
+                            <!-- Подсвечиваем найденные слова в тексте -->
+                            <p class="text-content">{{ document.content|linebreaks }}</p>
+                        {% else %}
+                            <p>{{ document.content|linebreaks }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Информация о документе</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li><strong>Автор:</strong> {{ document.author.get_full_name|default:document.author.username }}</li>
+                            <li><strong>Категория:</strong> {{ document.category.name|default:"Без категории" }}</li>
+                            <li><strong>Создано:</strong> {{ document.created_at|date:"d.m.Y H:i" }}</li>
+                            <li><strong>Слов в документе:</strong> {{ document.word_count }}</li>
+                        </ul>
+                        
+                        <div class="mt-3">
+                            <a href="{% url 'doc_storage:document_detail' document.pk %}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye"></i> Просмотр документа
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Советы по поиску -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6>Типы поиска</h6>
+                    </div>
+                    <div class="card-body">
+                        <small>
+                            <ul class="list-unstyled">
+                                <li><strong>Точное совпадение:</strong> Поиск целых слов</li>
+                                <li><strong>Частичное совпадение:</strong> Поиск частей слов</li>
+                                <li><strong>Нечеткий поиск:</strong> Поиск с учетом опечаток</li>
+                                <li><strong>Комбинированный:</strong> Все типы поиска</li>
+                            </ul>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Подсветка найденных слов в тексте
+document.addEventListener('DOMContentLoaded', function() {
+    const query = '{{ query|escapejs }}';
+    const textContent = document.querySelector('.text-content');
+    
+    if (query && textContent) {
+        // Простая подсветка (можно улучшить)
+        const regex = new RegExp(`(${query})`, 'gi');
+        textContent.innerHTML = textContent.innerHTML.replace(regex, '<mark>$1</mark>');
+    }
+});
+</script>
+{% endblock %}
