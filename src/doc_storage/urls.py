@@ -27,6 +27,12 @@ urlpatterns = [
          name='suggestions_api'),
     path('api/v1/upload-file/', views.upload_document_file_api, name='upload_file_api'),
 
+    # Авторизация и регистрация
+    path('register/', views.UserRegistrationView.as_view(), name='user_register'),
+    path('login/', views.UserLoginView.as_view(), name='user_login'),
+    path('logout/', views.UserLogoutView.as_view(), name='user_logout'),
+    path('profile/', views.UserProfileView.as_view(), name='user_profile'),
+
     # Web интерфейс маршруты
     path('', views.DocumentListView.as_view(), name='document_list'),
     path('document/<int:pk>/', views.DocumentDetailView.as_view(), name='document_detail'),

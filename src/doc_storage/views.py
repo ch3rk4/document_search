@@ -2,14 +2,17 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpRequest, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import ListView, DetailView, CreateView, UpdateView
+from django.views import View
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth import login, logout
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg
 from django.contrib import messages
 from django.urls import reverse_lazy, reverse
-from django.views import View
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -28,11 +31,134 @@ from .serializers import (
     WordSearchResultSerializer, DocumentWordCloudSerializer, SearchStatisticsSerializer
 )
 from .forms import DocumentUploadForm, DocumentEditForm, DocumentCreateForm, FileReplaceForm
+from .auth_forms import UserRegistrationForm, UserLoginForm, UserProfileForm
 from .file_service import DocumentFileService, FileTextExtractor
 from search_service.algorithms import WordSearchService
 
 
-# Function-Based Views (FBV)
+def get_anonymous_user():
+    """Получение анонимного пользователя"""
+    try:
+        return User.objects.get(username='anonymous')
+    except User.DoesNotExist:
+        # Fallback: создаем анонимного пользователя, если его почему-то нет
+        anonymous_user = User.objects.create_user(
+            username='anonymous',
+            email='anonymous@example.com',
+            first_name='Анонимный',
+            last_name='Пользователь'
+        )
+        anonymous_user.set_unusable_password()
+        anonymous_user.save()
+        return anonymous_user
+
+
+# ============================================================================
+# ФУНКЦИИ АВТОРИЗАЦИИ И РЕГИСТРАЦИИ
+# ============================================================================
+
+class UserRegistrationView(View):
+    """Представление для регистрации пользователя"""
+    template_name = 'doc_storage/auth/register.html'
+
+    def get(self, request):
+        """Отображение формы регистрации"""
+        if request.user.is_authenticated:
+            return redirect('doc_storage:document_list')
+
+        form = UserRegistrationForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        """Обработка регистрации"""
+        if request.user.is_authenticated:
+            return redirect('doc_storage:document_list')
+
+        form = UserRegistrationForm(request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            messages.success(request, f'Добро пожаловать, {user.get_full_name() or user.username}!')
+            return redirect('doc_storage:document_list')
+
+        return render(request, self.template_name, {'form': form})
+
+
+class UserLoginView(LoginView):
+    """Представление для входа пользователя"""
+    form_class = UserLoginForm
+    template_name = 'doc_storage/auth/login.html'
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        """URL для перенаправления после успешного входа"""
+        next_url = self.request.GET.get('next')
+        if next_url:
+            return next_url
+        return reverse('doc_storage:document_list')
+
+    def form_valid(self, form):
+        """Обработка успешного входа"""
+        response = super().form_valid(form)
+        messages.success(self.request,
+                         f'Добро пожаловать, {self.request.user.get_full_name() or self.request.user.username}!')
+        return response
+
+
+class UserLogoutView(LogoutView):
+    """Представление для выхода пользователя"""
+    next_page = 'doc_storage:document_list'
+
+    def dispatch(self, request, *args, **kwargs):
+        """Добавление сообщения при выходе"""
+        if request.user.is_authenticated:
+            messages.success(request, 'Вы успешно вышли из системы.')
+        return super().dispatch(request, *args, **kwargs)
+
+
+@method_decorator(login_required, name='dispatch')
+class UserProfileView(UpdateView):
+    """Представление профиля пользователя"""
+    model = User
+    form_class = UserProfileForm
+    template_name = 'doc_storage/auth/profile.html'
+
+    def get_object(self, queryset=None):
+        """Получение текущего пользователя"""
+        return self.request.user
+
+    def get_success_url(self):
+        """URL для перенаправления после успешного обновления"""
+        return reverse('doc_storage:user_profile')
+
+    def form_valid(self, form):
+        """Обработка успешного обновления профиля"""
+        response = super().form_valid(form)
+        messages.success(self.request, 'Профиль успешно обновлен!')
+        return response
+
+    def get_context_data(self, **kwargs):
+        """Добавление дополнительного контекста"""
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Статистика пользователя
+        context['user_documents_count'] = Document.objects.filter(author=user).count()
+        context['user_searches_count'] = SearchHistory.objects.filter(user=user).count()
+        context['recent_documents'] = Document.objects.filter(
+            author=user, is_active=True
+        ).order_by('-created_at')[:5]
+        context['recent_searches'] = SearchHistory.objects.filter(
+            user=user
+        ).order_by('-created_at')[:10]
+
+        return context
+
+
+# ============================================================================
+# API ФУНКЦИИ (FBV)
+# ============================================================================
 
 @api_view(['GET'])
 def search_words_in_document_api(request: HttpRequest) -> Response:
@@ -229,7 +355,62 @@ def get_search_statistics(request: HttpRequest) -> Response:
     return Response(serializer.data)
 
 
-# Class-Based Views (CBV)
+@api_view(['POST'])
+def upload_document_file_api(request: HttpRequest) -> Response:
+    """API функция для загрузки документа из файла"""
+    try:
+        if 'file' not in request.FILES:
+            return Response({
+                'error': 'Файл не был загружен'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        uploaded_file = request.FILES['file']
+        title = request.data.get('title', '').strip()
+        category_id = request.data.get('category_id')
+
+        # Получаем категорию если указана
+        category = None
+        if category_id:
+            try:
+                category = DocumentCategory.objects.get(id=category_id)
+            except DocumentCategory.DoesNotExist:
+                return Response({
+                    'error': 'Указанная категория не существует'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Получаем автора
+        if request.user.is_authenticated:
+            author = request.user
+        else:
+            author = get_anonymous_user()
+
+        # Создаем документ из файла
+        file_service = DocumentFileService()
+        document, error = file_service.create_document_from_file(
+            uploaded_file=uploaded_file,
+            title=title,
+            category=category,
+            author=author
+        )
+
+        if error:
+            return Response({
+                'error': error
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Возвращаем созданный документ
+        serializer = DocumentSerializer(document, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({
+            'error': f'Неожиданная ошибка: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============================================================================
+# WEB ИНТЕРФЕЙС - CLASS-BASED VIEWS (CBV)
+# ============================================================================
 
 class DocumentListView(ListView):
     """Класс для отображения списка документов"""
@@ -351,7 +532,203 @@ class SearchHistoryView(ListView):
         ).select_related('document').order_by('-created_at')
 
 
-# Django REST Framework ViewSets
+class DocumentUploadView(View):
+    """Представление для загрузки документа из файла"""
+    template_name = 'doc_storage/document_upload.html'
+
+    def get(self, request):
+        """Отображение формы загрузки"""
+        form = DocumentUploadForm()
+        context = {
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        """Обработка загрузки файла"""
+        form = DocumentUploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            uploaded_file = form.cleaned_data['file']
+            title = form.cleaned_data['title']
+            category = form.cleaned_data['category']
+            tags = form.cleaned_data['tags']
+
+            # Получаем автора
+            if request.user.is_authenticated:
+                author = request.user
+            else:
+                author = get_anonymous_user()
+
+            # Создаем документ из файла
+            file_service = DocumentFileService()
+            document, error = file_service.create_document_from_file(
+                uploaded_file=uploaded_file,
+                title=title,
+                category=category,
+                author=author
+            )
+
+            if error:
+                messages.error(request, f"Ошибка загрузки файла: {error}")
+                context = {
+                    'form': form,
+                    'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+                    'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+                }
+                return render(request, self.template_name, context)
+
+            # Добавляем теги к документу
+            for tag in tags:
+                DocumentTagRelation.objects.get_or_create(
+                    document=document,
+                    tag=tag
+                )
+
+            messages.success(
+                request,
+                f'Документ "{document.title}" успешно создан из файла "{uploaded_file.name}"'
+            )
+
+            return redirect('doc_storage:document_detail', pk=document.pk)
+
+        # Если форма невалидна, показываем ошибки
+        context = {
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
+
+
+class DocumentCreateView(View):
+    """Представление для создания документа вручную"""
+    template_name = 'doc_storage/document_create.html'
+
+    def get(self, request):
+        """Отображение формы создания"""
+        form = DocumentCreateForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        """Обработка создания документа"""
+        form = DocumentCreateForm(request.POST)
+
+        if form.is_valid():
+            # Получаем автора
+            if request.user.is_authenticated:
+                author = request.user
+            else:
+                author = get_anonymous_user()
+
+            # Создаем документ
+            document = Document.objects.create(
+                title=form.cleaned_data['title'],
+                content=form.cleaned_data['content'],
+                category=form.cleaned_data['category'],
+                author=author
+            )
+
+            # Добавляем теги к документу
+            tags = form.cleaned_data.get('tags', [])
+            for tag in tags:
+                DocumentTagRelation.objects.get_or_create(
+                    document=document,
+                    tag=tag
+                )
+
+            messages.success(request, f'Документ "{document.title}" успешно создан')
+            return redirect('doc_storage:document_detail', pk=document.pk)
+
+        return render(request, self.template_name, {'form': form})
+
+
+class DocumentEditView(LoginRequiredMixin, UpdateView):
+    """Представление для редактирования документа"""
+    model = Document
+    template_name = 'doc_storage/document_edit.html'
+    form_class = DocumentEditForm
+
+    def get_queryset(self):
+        """Ограничение редактирования только своими документами"""
+        return Document.objects.filter(author=self.request.user)
+
+    def form_valid(self, form):
+        """Обработка валидной формы редактирования"""
+        response = super().form_valid(form)
+        messages.success(self.request, f'Документ "{self.object.title}" успешно обновлен')
+        return response
+
+    def get_success_url(self):
+        """URL для перенаправления после успешного обновления"""
+        return reverse('doc_storage:document_detail', kwargs={'pk': self.object.pk})
+
+
+class DocumentReplaceFileView(LoginRequiredMixin, View):
+    """Представление для замены файла в документе"""
+    template_name = 'doc_storage/document_replace_file.html'
+
+    def get_object(self):
+        """Получение документа"""
+        return get_object_or_404(Document, pk=self.kwargs['pk'], author=self.request.user)
+
+    def get(self, request, pk):
+        """Отображение формы замены файла"""
+        document = self.get_object()
+        form = FileReplaceForm()
+        context = {
+            'document': document,
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
+
+    def post(self, request, pk):
+        """Обработка замены файла"""
+        document = self.get_object()
+        form = FileReplaceForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            uploaded_file = form.cleaned_data['file']
+            keep_title = form.cleaned_data['keep_title']
+
+            # Обновляем документ из файла
+            file_service = DocumentFileService()
+            success, error = file_service.update_document_from_file(
+                document=document,
+                uploaded_file=uploaded_file
+            )
+
+            if error:
+                messages.error(request, f"Ошибка замены файла: {error}")
+            else:
+                # Обновляем заголовок если нужно
+                if not keep_title:
+                    file_name = Path(uploaded_file.name).stem
+                    document.title = file_name
+                    document.save()
+
+                messages.success(
+                    request,
+                    f'Файл в документе "{document.title}" успешно заменен'
+                )
+                return redirect('doc_storage:document_detail', pk=document.pk)
+
+        context = {
+            'document': document,
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
+
+
+# ============================================================================
+# DJANGO REST FRAMEWORK VIEWSETS
+# ============================================================================
 
 class DocumentCategoryViewSet(viewsets.ModelViewSet):
     """ViewSet для категорий документов"""
@@ -511,278 +888,3 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
         }
 
         return Response(stats)
-
-
-# Представления для загрузки файлов
-
-class DocumentUploadView(View):
-    """Представление для загрузки документа из файла"""
-    template_name = 'doc_storage/document_upload.html'
-
-    def get(self, request):
-        """Отображение формы загрузки"""
-        form = DocumentUploadForm()
-        context = {
-            'form': form,
-            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
-            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
-        }
-        return render(request, self.template_name, context)
-
-    def post(self, request):
-        """Обработка загрузки файла"""
-        form = DocumentUploadForm(request.POST, request.FILES)
-
-        if form.is_valid():
-            uploaded_file = form.cleaned_data['file']
-            title = form.cleaned_data['title']
-            category = form.cleaned_data['category']
-            tags = form.cleaned_data['tags']
-
-            # Получаем автора - если пользователь не авторизован, используем анонимного
-            if request.user.is_authenticated:
-                author = request.user
-            else:
-                # Создаем анонимного пользователя или используем существующего
-                from django.contrib.auth.models import User
-                author, created = User.objects.get_or_create(
-                    username='anonymous',
-                    defaults={
-                        'email': 'anonymous@example.com',
-                        'first_name': 'Анонимный',
-                        'last_name': 'Пользователь'
-                    }
-                )
-
-            # Создаем документ из файла
-            file_service = DocumentFileService()
-            document, error = file_service.create_document_from_file(
-                uploaded_file=uploaded_file,
-                title=title,
-                category=category,
-                author=author
-            )
-
-            if error:
-                messages.error(request, f"Ошибка загрузки файла: {error}")
-                context = {
-                    'form': form,
-                    'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
-                    'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
-                }
-                return render(request, self.template_name, context)
-
-            # Добавляем теги к документу
-            for tag in tags:
-                DocumentTagRelation.objects.get_or_create(
-                    document=document,
-                    tag=tag
-                )
-
-            messages.success(
-                request,
-                f'Документ "{document.title}" успешно создан из файла "{uploaded_file.name}"'
-            )
-
-            # Перенаправляем на страницу созданного документа
-            return redirect('doc_storage:document_detail', pk=document.pk)
-
-        # Если форма невалидна, показываем ошибки
-        context = {
-            'form': form,
-            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
-            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
-        }
-        return render(request, self.template_name, context)
-
-
-class DocumentCreateView(View):
-    """Представление для создания документа вручную"""
-    template_name = 'doc_storage/document_create.html'
-
-    def get(self, request):
-        """Отображение формы создания"""
-        form = DocumentCreateForm()
-        return render(request, self.template_name, {'form': form})
-
-    def post(self, request):
-        """Обработка создания документа"""
-        form = DocumentCreateForm(request.POST)
-
-        if form.is_valid():
-            # Получаем автора - если пользователь не авторизован, используем анонимного
-            if request.user.is_authenticated:
-                author = request.user
-            else:
-                # Создаем анонимного пользователя или используем существующего
-                from django.contrib.auth.models import User
-                author, created = User.objects.get_or_create(
-                    username='anonymous',
-                    defaults={
-                        'email': 'anonymous@example.com',
-                        'first_name': 'Анонимный',
-                        'last_name': 'Пользователь'
-                    }
-                )
-
-            # Создаем документ
-            document = Document.objects.create(
-                title=form.cleaned_data['title'],
-                content=form.cleaned_data['content'],
-                category=form.cleaned_data['category'],
-                author=author
-            )
-
-            # Добавляем теги к документу
-            tags = form.cleaned_data.get('tags', [])
-            for tag in tags:
-                DocumentTagRelation.objects.get_or_create(
-                    document=document,
-                    tag=tag
-                )
-
-            messages.success(request, f'Документ "{document.title}" успешно создан')
-            return redirect('doc_storage:document_detail', pk=document.pk)
-
-        return render(request, self.template_name, {'form': form})
-
-class DocumentEditView(LoginRequiredMixin, UpdateView):
-    """Представление для редактирования документа"""
-    model = Document
-    template_name = 'doc_storage/document_edit.html'
-    form_class = DocumentEditForm
-
-    def get_queryset(self):
-        """Ограничение редактирования только своими документами"""
-        return Document.objects.filter(author=self.request.user)
-
-    def form_valid(self, form):
-        """Обработка валидной формы редактирования"""
-        response = super().form_valid(form)
-        messages.success(self.request, f'Документ "{self.object.title}" успешно обновлен')
-        return response
-
-    def get_success_url(self):
-        """URL для перенаправления после успешного обновления"""
-        return reverse('doc_storage:document_detail', kwargs={'pk': self.object.pk})
-
-
-class DocumentReplaceFileView(LoginRequiredMixin, UpdateView):
-    """Представление для замены файла в документе"""
-    model = Document
-    template_name = 'doc_storage/document_replace_file.html'
-    form_class = FileReplaceForm
-
-    def get_queryset(self):
-        """Ограничение замены файлов только в своих документах"""
-        return Document.objects.filter(author=self.request.user)
-
-    def get_form(self, form_class=None):
-        """Переопределяем метод для работы с формой файла"""
-        if form_class is None:
-            form_class = self.get_form_class()
-
-        # Для GET запроса возвращаем пустую форму
-        if self.request.method == 'GET':
-            return form_class()
-
-        # Для POST запроса передаем данные и файлы
-        return form_class(data=self.request.POST, files=self.request.FILES)
-
-    def form_valid(self, form):
-        """Обработка замены файла"""
-        uploaded_file = form.cleaned_data['file']
-        keep_title = form.cleaned_data['keep_title']
-
-        # Обновляем документ из файла
-        file_service = DocumentFileService()
-        success, error = file_service.update_document_from_file(
-            document=self.object,
-            uploaded_file=uploaded_file
-        )
-
-        if error:
-            messages.error(self.request, f"Ошибка замены файла: {error}")
-            return self.form_invalid(form)
-
-        # Обновляем заголовок если нужно
-        if not keep_title:
-            file_name = Path(uploaded_file.name).stem
-            self.object.title = file_name
-            self.object.save()
-
-        messages.success(
-            self.request,
-            f'Файл в документе "{self.object.title}" успешно заменен'
-        )
-
-        return redirect('doc_storage:document_detail', pk=self.object.pk)
-
-    def get_context_data(self, **kwargs):
-        """Добавление контекста"""
-        context = super().get_context_data(**kwargs)
-        context['supported_formats'] = sorted(FileTextExtractor.SUPPORTED_EXTENSIONS)
-        context['max_file_size_mb'] = FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
-        return context
-
-
-@api_view(['POST'])
-def upload_document_file_api(request: HttpRequest) -> Response:
-    """API функция для загрузки документа из файла"""
-    try:
-        if 'file' not in request.FILES:
-            return Response({
-                'error': 'Файл не был загружен'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        uploaded_file = request.FILES['file']
-        title = request.data.get('title', '').strip()
-        category_id = request.data.get('category_id')
-
-        # Получаем категорию если указана
-        category = None
-        if category_id:
-            try:
-                category = DocumentCategory.objects.get(id=category_id)
-            except DocumentCategory.DoesNotExist:
-                return Response({
-                    'error': 'Указанная категория не существует'
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Получаем автора
-        if request.user.is_authenticated:
-            author = request.user
-        else:
-            # Создаем анонимного пользователя или используем существующего
-            from django.contrib.auth.models import User
-            author, created = User.objects.get_or_create(
-                username='anonymous',
-                defaults={
-                    'email': 'anonymous@example.com',
-                    'first_name': 'Анонимный',
-                    'last_name': 'Пользователь'
-                }
-            )
-
-        # Создаем документ из файла
-        file_service = DocumentFileService()
-        document, error = file_service.create_document_from_file(
-            uploaded_file=uploaded_file,
-            title=title,
-            category=category,
-            author=author
-        )
-
-        if error:
-            return Response({
-                'error': error
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Возвращаем созданный документ
-        serializer = DocumentSerializer(document, context={'request': request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    except Exception as e:
-        return Response({
-            'error': f'Неожиданная ошибка: {str(e)}'
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
