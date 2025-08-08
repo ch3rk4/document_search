@@ -5,24 +5,19 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fix for flake8">
-      <change afterPath="$PROJECT_DIR$/.flake8" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/load_test_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/load_test_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/init_project.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/init_project.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/file_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/serializers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/document_search/test_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/test_settings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/document_search/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/urls.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/search_service/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/admin.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/search_service/algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/algorithms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/search_service/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/search_service/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/tests.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/search_service/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_algorithms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_file_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -41,7 +36,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="day_6" />
+        <entry key="$PROJECT_DIR$" value="day_7" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -74,7 +69,7 @@
     "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
     "Python.run_tests.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "day__7"
+    "git-widget-placeholder": "finally__day"
   }
 }]]></component>
   <component name="RecentsManager">
@@ -370,7 +365,15 @@
       <option name="project" value="LOCAL" />
       <updated>1754668095728</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="fix for flake8">
+      <option name="closed" value="true" />
+      <created>1754669307907</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1754669307907</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">

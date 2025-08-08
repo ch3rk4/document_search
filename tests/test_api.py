@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from doc_storage.models import (Document, DocumentCategory, DocumentTag,
+from doc_storage.models import (Document, DocumentCategory,
                                 SearchHistory, WordMatch)
 
 

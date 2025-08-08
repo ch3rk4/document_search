@@ -1,7 +1,12 @@
 import difflib
 import re
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import User
+
+    from doc_storage.models import Document
 
 
 class TextSearchAlgorithms:
@@ -70,7 +75,7 @@ class TextSearchAlgorithms:
             return []
 
         # Создание таблицы плохого символа
-        bad_char = {}
+        bad_char: Dict[str, int] = {}
         for i in range(m):
             bad_char[pattern[i]] = i
 
@@ -136,7 +141,7 @@ class TextSearchAlgorithms:
         return matches
 
     @staticmethod
-    def fuzzy_search(text: str, pattern: str, max_distance: int = 2) -> List[Dict]:
+    def fuzzy_search(text: str, pattern: str, max_distance: int = 2) -> List[Dict[str, Any]]:
         """Нечеткий поиск с использованием расстояния Левенштейна"""
         normalized_text = TextSearchAlgorithms.normalize_text(text)
         normalized_pattern = TextSearchAlgorithms.normalize_text(pattern)
@@ -182,12 +187,17 @@ class TextSearchAlgorithms:
 class WordSearchService:
     """Сервис для поиска слов внутри документов"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.algorithms = TextSearchAlgorithms()
 
     def search_words_in_document(
-        self, document, query: str, search_type: str = "combined", user=None, ip_address: Optional[str] = None
-    ) -> Tuple[List[Dict], float]:
+        self,
+        document: "Document",
+        query: str,
+        search_type: str = "combined",
+        user: Optional["User"] = None,
+        ip_address: Optional[str] = None,
+    ) -> Tuple[List[Dict[str, Any]], float]:
         """Основной метод поиска слов в документе"""
 
         if not query or len(query.strip()) < 1:
@@ -211,7 +221,7 @@ class WordSearchService:
         normalized_query = self.algorithms.normalize_text(query)
         normalized_content = self.algorithms.normalize_text(document.content)
 
-        all_matches = []
+        all_matches: List[Dict[str, Any]] = []
 
         if search_type in ["exact", "combined"]:
             exact_matches = self._exact_word_search(document, normalized_content, normalized_query)
@@ -241,7 +251,7 @@ class WordSearchService:
 
         return unique_matches, search_time
 
-    def _exact_word_search(self, document, text: str, query: str) -> List[Dict]:
+    def _exact_word_search(self, document: "Document", text: str, query: str) -> List[Dict[str, Any]]:
         """Точный поиск слов с использованием разных алгоритмов"""
         matches = []
 
@@ -283,7 +293,7 @@ class WordSearchService:
 
         return matches
 
-    def _partial_word_search(self, document, text: str, query: str) -> List[Dict]:
+    def _partial_word_search(self, document: "Document", text: str, query: str) -> List[Dict[str, Any]]:
         """Поиск частей слов"""
         matches = []
 
@@ -346,7 +356,7 @@ class WordSearchService:
 
         return matches
 
-    def _fuzzy_word_search(self, document, text: str, query: str) -> List[Dict]:
+    def _fuzzy_word_search(self, document: "Document", text: str, query: str) -> List[Dict[str, Any]]:
         """Нечеткий поиск слов"""
         matches = []
         fuzzy_results = self.algorithms.fuzzy_search(text, query, max_distance=2)
@@ -370,7 +380,7 @@ class WordSearchService:
 
         return matches
 
-    def _remove_duplicates(self, matches: List[Dict]) -> List[Dict]:
+    def _remove_duplicates(self, matches: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Удаление дубликатов совпадений"""
         seen = set()
         unique_matches = []
@@ -385,7 +395,7 @@ class WordSearchService:
 
         return unique_matches
 
-    def _save_word_matches(self, document, query: str, matches: List[Dict]) -> None:
+    def _save_word_matches(self, document: "Document", query: str, matches: List[Dict[str, Any]]) -> None:
         """Сохранение найденных слов в базу данных"""
         try:
             from doc_storage.models import WordMatch
@@ -410,7 +420,13 @@ class WordSearchService:
             print(f"Ошибка сохранения совпадений: {e}")
 
     def _save_search_history(
-        self, query: str, document, results_count: int, search_time: float, user=None, ip_address: Optional[str] = None
+        self,
+        query: str,
+        document: "Document",
+        results_count: int,
+        search_time: float,
+        user: Optional["User"] = None,
+        ip_address: Optional[str] = None,
     ) -> None:
         """Сохранение истории поиска"""
         try:
@@ -427,7 +443,7 @@ class WordSearchService:
         except Exception as e:
             print(f"Ошибка сохранения истории поиска: {e}")
 
-    def get_search_results(self, document, query: str):
+    def get_search_results(self, document: "Document", query: str) -> Any:
         """Получение результатов поиска из базы данных"""
         try:
             from doc_storage.models import WordMatch

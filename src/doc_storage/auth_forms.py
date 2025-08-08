@@ -1,10 +1,12 @@
+from typing import Any
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 
-class UserRegistrationForm(UserCreationForm):
+class UserRegistrationForm(UserCreationForm[User]):
     """Форма регистрации пользователя"""
 
     email = forms.EmailField(
@@ -25,7 +27,7 @@ class UserRegistrationForm(UserCreationForm):
         model = User
         fields = ["username", "first_name", "last_name", "email", "password1", "password2"]
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs.update(
             {"class": "form-control", "placeholder": "Введите имя пользователя"}
@@ -33,14 +35,14 @@ class UserRegistrationForm(UserCreationForm):
         self.fields["password1"].widget.attrs.update({"class": "form-control", "placeholder": "Введите пароль"})
         self.fields["password2"].widget.attrs.update({"class": "form-control", "placeholder": "Повторите пароль"})
 
-    def clean_email(self):
+    def clean_email(self) -> str:
         """Проверка уникальности email"""
         email = self.cleaned_data.get("email")
-        if User.objects.filter(email=email).exists():
+        if email and User.objects.filter(email=email).exists():
             raise ValidationError("Пользователь с таким email уже существует.")
         return email
 
-    def save(self, commit=True):
+    def save(self, commit: bool = True) -> User:
         """Сохранение пользователя"""
         user = super().save(commit=False)
         user.email = self.cleaned_data["email"]
@@ -54,13 +56,13 @@ class UserRegistrationForm(UserCreationForm):
 class UserLoginForm(AuthenticationForm):
     """Форма входа пользователя"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self.fields["username"].widget.attrs.update({"class": "form-control", "placeholder": "Имя пользователя"})
         self.fields["password"].widget.attrs.update({"class": "form-control", "placeholder": "Пароль"})
 
 
-class UserProfileForm(forms.ModelForm):
+class UserProfileForm(forms.ModelForm[User]):
     """Форма редактирования профиля пользователя"""
 
     class Meta:
@@ -72,9 +74,9 @@ class UserProfileForm(forms.ModelForm):
             "email": forms.EmailInput(attrs={"class": "form-control", "placeholder": "Введите email"}),
         }
 
-    def clean_email(self):
+    def clean_email(self) -> str:
         """Проверка уникальности email (исключая текущего пользователя)"""
         email = self.cleaned_data.get("email")
-        if User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
+        if email and User.objects.filter(email=email).exclude(pk=self.instance.pk).exists():
             raise ValidationError("Пользователь с таким email уже существует.")
         return email

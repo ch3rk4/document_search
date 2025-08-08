@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -41,7 +42,7 @@ class DocumentUploadForm(forms.Form):
         widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
     )
 
-    def clean_file(self):
+    def clean_file(self) -> Any:
         """Валидация загружаемого файла"""
         file = self.cleaned_data.get("file")
 
@@ -64,7 +65,7 @@ class DocumentUploadForm(forms.Form):
 
         return file
 
-    def clean_title(self):
+    def clean_title(self) -> str:
         """Валидация заголовка"""
         title = self.cleaned_data.get("title", "").strip()
 
@@ -79,7 +80,7 @@ class DocumentUploadForm(forms.Form):
         return title
 
 
-class DocumentEditForm(forms.ModelForm):
+class DocumentEditForm(forms.ModelForm[Document]):
     """Форма для редактирования документа"""
 
     class Meta:
@@ -94,13 +95,16 @@ class DocumentEditForm(forms.ModelForm):
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.fields["category"].empty_label = "Выберите категорию"
-        self.fields["category"].queryset = DocumentCategory.objects.all()
+        category_field = self.fields["category"]
+        if hasattr(category_field, "empty_label"):
+            category_field.empty_label = "Выберите категорию"  # type: ignore[misc]
+        if hasattr(category_field, "queryset"):
+            category_field.queryset = DocumentCategory.objects.all()  # type: ignore[misc]
 
 
-class DocumentCreateForm(forms.ModelForm):
+class DocumentCreateForm(forms.ModelForm[Document]):
     """Форма для создания документа вручную"""
 
     tags = forms.ModelMultipleChoiceField(
@@ -121,12 +125,15 @@ class DocumentCreateForm(forms.ModelForm):
             "category": forms.Select(attrs={"class": "form-select"}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self.fields["category"].empty_label = "Выберите категорию"
-        self.fields["category"].queryset = DocumentCategory.objects.all()
+        category_field = self.fields["category"]
+        if hasattr(category_field, "empty_label"):
+            category_field.empty_label = "Выберите категорию"  # type: ignore[misc]
+        if hasattr(category_field, "queryset"):
+            category_field.queryset = DocumentCategory.objects.all()  # type: ignore[misc]
 
-    def clean_title(self):
+    def clean_title(self) -> str:
         """Валидация заголовка на уникальность"""
         title = self.cleaned_data.get("title", "").strip()
 
@@ -154,7 +161,7 @@ class FileReplaceForm(forms.Form):
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
-    def clean_file(self):
+    def clean_file(self) -> Any:
         """Валидация загружаемого файла"""
         file = self.cleaned_data.get("file")
 

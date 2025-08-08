@@ -1,3 +1,5 @@
+from typing import Any, Dict, List
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
@@ -5,7 +7,7 @@ from .models import (Document, DocumentCategory, DocumentTag,
                      DocumentTagRelation, SearchHistory, WordMatch)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer[User]):
     """Сериализатор для модели пользователя"""
 
     class Meta:
@@ -14,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["id"]
 
 
-class DocumentCategorySerializer(serializers.ModelSerializer):
+class DocumentCategorySerializer(serializers.ModelSerializer[DocumentCategory]):
     """Сериализатор для категорий документов"""
 
     document_count = serializers.SerializerMethodField()
@@ -26,10 +28,10 @@ class DocumentCategorySerializer(serializers.ModelSerializer):
 
     def get_document_count(self, obj: DocumentCategory) -> int:
         """Подсчет количества документов в категории"""
-        return obj.document_set.filter(is_active=True).count()
+        return Document.objects.filter(category=obj, is_active=True).count()
 
 
-class DocumentTagSerializer(serializers.ModelSerializer):
+class DocumentTagSerializer(serializers.ModelSerializer[DocumentTag]):
     """Сериализатор для тегов документов"""
 
     class Meta:
@@ -38,13 +40,13 @@ class DocumentTagSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "created_at"]
 
 
-class DocumentSerializer(serializers.ModelSerializer):
+class DocumentSerializer(serializers.ModelSerializer[Document]):
     """Основной сериализатор для документов"""
 
     author = UserSerializer(read_only=True)
     category = DocumentCategorySerializer(read_only=True)
     category_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    tags = DocumentTagSerializer(source="tag_relations.tag", many=True, read_only=True)
+    tags = DocumentTagSerializer(many=True, read_only=True, source="get_tags")
     tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True)
     file_url = serializers.SerializerMethodField()
 
@@ -76,7 +78,11 @@ class DocumentSerializer(serializers.ModelSerializer):
                 return request.build_absolute_uri(obj.file_path.url)
         return ""
 
-    def create(self, validated_data: dict) -> Document:
+    def get_tags(self, obj: Document) -> List[DocumentTag]:
+        """Получение тегов документа"""
+        return [relation.tag for relation in obj.tag_relations.select_related("tag")]
+
+    def create(self, validated_data: Dict[str, Any]) -> Document:
         """Создание документа с тегами"""
         tag_ids = validated_data.pop("tag_ids", [])
         category_id = validated_data.pop("category_id", None)
@@ -96,7 +102,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
         return document
 
-    def update(self, instance: Document, validated_data: dict) -> Document:
+    def update(self, instance: Document, validated_data: Dict[str, Any]) -> Document:
         """Обновление документа с тегами"""
         tag_ids = validated_data.pop("tag_ids", None)
         category_id = validated_data.pop("category_id", None)
@@ -115,7 +121,7 @@ class DocumentSerializer(serializers.ModelSerializer):
 
         return instance
 
-    def _update_document_tags(self, document: Document, tag_ids: list) -> None:
+    def _update_document_tags(self, document: Document, tag_ids: List[int]) -> None:
         """Обновление тегов документа"""
         # Удаляем существующие связи
         DocumentTagRelation.objects.filter(document=document).delete()
@@ -129,7 +135,7 @@ class DocumentSerializer(serializers.ModelSerializer):
                 continue
 
 
-class DocumentListSerializer(serializers.ModelSerializer):
+class DocumentListSerializer(serializers.ModelSerializer[Document]):
     """Упрощенный сериализатор для списка документов"""
 
     author_name = serializers.CharField(source="author.username", read_only=True)
@@ -161,7 +167,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
         return obj.content[:200] + "..." if len(obj.content) > 200 else obj.content
 
 
-class WordMatchSerializer(serializers.ModelSerializer):
+class WordMatchSerializer(serializers.ModelSerializer[WordMatch]):
     """Сериализатор для найденных слов"""
 
     document_title = serializers.CharField(source="document.title", read_only=True)
@@ -212,7 +218,7 @@ class DocumentWordCloudSerializer(serializers.Serializer):
     total_unique_words = serializers.IntegerField(read_only=True)
 
 
-class SearchHistorySerializer(serializers.ModelSerializer):
+class SearchHistorySerializer(serializers.ModelSerializer[SearchHistory]):
     """Сериализатор для истории поиска"""
 
     user_name = serializers.CharField(source="user.username", read_only=True)

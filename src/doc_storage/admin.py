@@ -1,4 +1,8 @@
+from typing import Any
+
 from django.contrib import admin
+from django.db.models.query import QuerySet
+from django.http import HttpRequest
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -7,7 +11,7 @@ from .models import (Document, DocumentCategory, DocumentTag,
 
 
 @admin.register(DocumentCategory)
-class DocumentCategoryAdmin(admin.ModelAdmin):
+class DocumentCategoryAdmin(admin.ModelAdmin[DocumentCategory]):
     """Админ-панель для категорий документов"""
 
     list_display = ["name", "description", "document_count", "created_at"]
@@ -15,17 +19,17 @@ class DocumentCategoryAdmin(admin.ModelAdmin):
     search_fields = ["name", "description"]
     ordering = ["name"]
 
-    def document_count(self, obj):
+    def document_count(self, obj: DocumentCategory) -> str:
         """Подсчет количества документов в категории"""
-        count = obj.document_set.filter(is_active=True).count()
+        count = Document.objects.filter(category=obj, is_active=True).count()
         url = reverse("admin:doc_storage_document_changelist") + f"?category__id__exact={obj.id}"
         return format_html('<a href="{}">{}</a>', url, count)
 
-    document_count.short_description = "Количество документов"
+    document_count.short_description = "Количество документов"  # type: ignore[attr-defined]
 
 
 @admin.register(DocumentTag)
-class DocumentTagAdmin(admin.ModelAdmin):
+class DocumentTagAdmin(admin.ModelAdmin[DocumentTag]):
     """Админ-панель для тегов документов"""
 
     list_display = ["name", "color_preview", "usage_count", "created_at"]
@@ -33,22 +37,22 @@ class DocumentTagAdmin(admin.ModelAdmin):
     search_fields = ["name"]
     ordering = ["name"]
 
-    def color_preview(self, obj):
+    def color_preview(self, obj: DocumentTag) -> str:
         """Превью цвета тега"""
         return format_html(
             '<div style="width: 20px; height: 20px; background-color: {}; border: 1px solid #ccc;"></div>', obj.color
         )
 
-    color_preview.short_description = "Цвет"
+    color_preview.short_description = "Цвет"  # type: ignore[attr-defined]
 
-    def usage_count(self, obj):
+    def usage_count(self, obj: DocumentTag) -> int:
         """Подсчет использования тега"""
         return obj.document_relations.count()
 
-    usage_count.short_description = "Использований"
+    usage_count.short_description = "Использований"  # type: ignore[attr-defined]
 
 
-class DocumentTagRelationInline(admin.TabularInline):
+class DocumentTagRelationInline(admin.TabularInline[DocumentTagRelation, Document]):
     """Inline для связей документов и тегов"""
 
     model = DocumentTagRelation
@@ -56,7 +60,7 @@ class DocumentTagRelationInline(admin.TabularInline):
 
 
 @admin.register(Document)
-class DocumentAdmin(admin.ModelAdmin):
+class DocumentAdmin(admin.ModelAdmin[Document]):
     """Админ-панель для документов"""
 
     list_display = [
@@ -86,25 +90,25 @@ class DocumentAdmin(admin.ModelAdmin):
         ),
     )
 
-    def search_count(self, obj):
+    def search_count(self, obj: Document) -> str:
         """Подсчет количества поисков в документе"""
         count = SearchHistory.objects.filter(document=obj).count()
         if count > 0:
             url = reverse("admin:doc_storage_searchhistory_changelist") + f"?document__id__exact={obj.id}"
             return format_html('<a href="{}">{}</a>', url, count)
-        return 0
+        return str(0)
 
-    search_count.short_description = "Количество поисков"
+    search_count.short_description = "Количество поисков"  # type: ignore[attr-defined]
 
-    def save_model(self, request, obj, form, change):
+    def save_model(self, request: HttpRequest, obj: Document, form: Any, change: bool) -> None:
         """Автоматическая установка автора при создании"""
-        if not change and not obj.author:
+        if not change and not obj.author_id:
             obj.author = request.user
         super().save_model(request, obj, form, change)
 
 
 @admin.register(WordMatch)
-class WordMatchAdmin(admin.ModelAdmin):
+class WordMatchAdmin(admin.ModelAdmin[WordMatch]):
     """Админ-панель для найденных слов"""
 
     list_display = ["matched_word", "document", "query", "match_type", "relevance_score", "position", "created_at"]
@@ -120,17 +124,17 @@ class WordMatchAdmin(admin.ModelAdmin):
         ("Метаданные", {"fields": ("created_at",), "classes": ("collapse",)}),
     )
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[WordMatch]:
         """Оптимизация запросов с предзагрузкой связанных объектов"""
         return super().get_queryset(request).select_related("document")
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         """Запрет на ручное добавление записей совпадений"""
         return False
 
 
 @admin.register(SearchHistory)
-class SearchHistoryAdmin(admin.ModelAdmin):
+class SearchHistoryAdmin(admin.ModelAdmin[SearchHistory]):
     """Админ-панель для истории поиска"""
 
     list_display = ["query", "document", "user", "results_count", "search_time", "ip_address", "created_at"]
@@ -145,17 +149,17 @@ class SearchHistoryAdmin(admin.ModelAdmin):
         ("Метаданные", {"fields": ("ip_address", "created_at"), "classes": ("collapse",)}),
     )
 
-    def get_queryset(self, request):
+    def get_queryset(self, request: HttpRequest) -> QuerySet[SearchHistory]:
         """Оптимизация запросов с предзагрузкой связанных объектов"""
         return super().get_queryset(request).select_related("document", "user")
 
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         """Запрет на ручное добавление записей истории"""
         return False
 
 
 # Дополнительные административные действия
-class WordMatchInline(admin.TabularInline):
+class WordMatchInline(admin.TabularInline[WordMatch, Document]):
     """Inline для просмотра найденных слов в документе"""
 
     model = WordMatch
@@ -163,11 +167,11 @@ class WordMatchInline(admin.TabularInline):
     readonly_fields = ["query", "matched_word", "match_type", "relevance_score", "position", "created_at"]
     fields = ["query", "matched_word", "match_type", "relevance_score", "position"]
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, request: HttpRequest, obj: Document = None) -> bool:
         return False
 
 
-class SearchHistoryInline(admin.TabularInline):
+class SearchHistoryInline(admin.TabularInline[SearchHistory, Document]):
     """Inline для просмотра истории поиска в документе"""
 
     model = SearchHistory
@@ -175,7 +179,7 @@ class SearchHistoryInline(admin.TabularInline):
     readonly_fields = ["query", "user", "results_count", "search_time", "created_at"]
     fields = ["query", "user", "results_count", "search_time", "created_at"]
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, request: HttpRequest, obj: Document = None) -> bool:
         return False
 
 
@@ -195,21 +199,22 @@ class RelevanceScoreFilter(admin.SimpleListFilter):
     title = "оценка релевантности"
     parameter_name = "relevance"
 
-    def lookups(self, request, model_admin):
-        return (
+    def lookups(self, request: HttpRequest, model_admin: Any) -> list[tuple[str, str]]:
+        return [
             ("high", "Высокая (≥ 1.0)"),
             ("medium", "Средняя (0.5-1.0)"),
             ("low", "Низкая (< 0.5)"),
-        )
+        ]
 
-    def queryset(self, request, queryset):
+    def queryset(self, request: HttpRequest, queryset: QuerySet[Any]) -> QuerySet[Any]:
         if self.value() == "high":
             return queryset.filter(relevance_score__gte=1.0)
         elif self.value() == "medium":
             return queryset.filter(relevance_score__gte=0.5, relevance_score__lt=1.0)
         elif self.value() == "low":
             return queryset.filter(relevance_score__lt=0.5)
+        return queryset
 
 
 # Добавляем дополнительные фильтры
-WordMatchAdmin.list_filter.append(RelevanceScoreFilter)
+WordMatchAdmin.list_filter = list(WordMatchAdmin.list_filter) + [RelevanceScoreFilter]

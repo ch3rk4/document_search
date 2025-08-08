@@ -1,9 +1,10 @@
 """
 Настройки Django для тестов
 """
+from typing import Any, Dict
 
 # Используем SQLite для тестов (быстрее чем PostgreSQL)
-DATABASES = {
+DATABASES: Dict[str, Dict[str, Any]] = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
@@ -13,10 +14,10 @@ DATABASES = {
 
 # Отключаем миграции для ускорения тестов
 class DisableMigrations:
-    def __contains__(self, item):
+    def __contains__(self, item: Any) -> bool:
         return True
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> None:
         return None
 
 
@@ -28,7 +29,7 @@ PASSWORD_HASHERS = [
 ]
 
 # Отключаем логирование в тестах
-LOGGING = {
+LOGGING: Dict[str, Any] = {
     "version": 1,
     "disable_existing_loggers": False,
     "handlers": {
@@ -45,7 +46,7 @@ LOGGING = {
 }
 
 # Отключаем кэширование
-CACHES = {
+CACHES: Dict[str, Dict[str, str]] = {
     "default": {
         "BACKEND": "django.core.cache.backends.dummy.DummyCache",
     }
