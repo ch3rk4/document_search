@@ -1,10 +1,7 @@
 import difflib
 import re
 import time
-from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
-
-from django.db.models import QuerySet
+from typing import Dict, List, Optional, Tuple
 
 
 class TextSearchAlgorithms:

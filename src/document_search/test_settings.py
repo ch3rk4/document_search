@@ -1,7 +1,6 @@
 """
 Настройки Django для тестов
 """
-from .settings import *
 
 # Используем SQLite для тестов (быстрее чем PostgreSQL)
 DATABASES = {

@@ -4,12 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fixes">
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fix for flake8">
+      <change afterPath="$PROJECT_DIR$/.flake8" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/migrations/0001_initial.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/migrations/0001_initial.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/load_test_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/load_test_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/doc_storage/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/tests.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/src/templates/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/document_search/test_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/test_settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/document_search/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/search_service/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/search_service/algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/algorithms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/search_service/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/search_service/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/search_service/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_algorithms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_file_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -333,7 +346,31 @@
       <option name="project" value="LOCAL" />
       <updated>1754639562721</updated>
     </task>
-    <option name="localTasksCounter" value="24" />
+    <task id="LOCAL-00024" summary="new funcs">
+      <option name="closed" value="true" />
+      <created>1754667996085</created>
+      <option name="number" value="00024" />
+      <option name="presentableId" value="LOCAL-00024" />
+      <option name="project" value="LOCAL" />
+      <updated>1754667996091</updated>
+    </task>
+    <task id="LOCAL-00025" summary="use black and isort">
+      <option name="closed" value="true" />
+      <created>1754668086038</created>
+      <option name="number" value="00025" />
+      <option name="presentableId" value="LOCAL-00025" />
+      <option name="project" value="LOCAL" />
+      <updated>1754668086039</updated>
+    </task>
+    <task id="LOCAL-00026" summary="use black and isort">
+      <option name="closed" value="true" />
+      <created>1754668095728</created>
+      <option name="number" value="00026" />
+      <option name="presentableId" value="LOCAL-00026" />
+      <option name="project" value="LOCAL" />
+      <updated>1754668095728</updated>
+    </task>
+    <option name="localTasksCounter" value="27" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -355,6 +392,9 @@
     <MESSAGE value="rework" />
     <MESSAGE value="new migrate" />
     <MESSAGE value="fixes" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixes" />
+    <MESSAGE value="new funcs" />
+    <MESSAGE value="use black and isort" />
+    <MESSAGE value="fix for flake8" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix for flake8" />
   </component>
 </project>
