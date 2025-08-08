@@ -1,9 +1,7 @@
+import difflib
 import re
 import time
-from typing import List, Dict, Set, Tuple, Optional
-from django.db.models import QuerySet
-from collections import defaultdict
-import difflib
+from typing import Dict, List, Optional, Tuple
 
 
 class TextSearchAlgorithms:
@@ -15,9 +13,9 @@ class TextSearchAlgorithms:
         # Приведение к нижнему регистру и удаление лишних пробелов
         text = text.lower().strip()
         # Удаление специальных символов, кроме русских и английских букв, цифр и пробелов
-        text = re.sub(r'[^\w\s]', ' ', text)
+        text = re.sub(r"[^\w\s]", " ", text)
         # Замена множественных пробелов на одинарные
-        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r"\s+", " ", text)
         return text
 
     @staticmethod
@@ -126,7 +124,7 @@ class TextSearchAlgorithms:
             # Проверка хешей
             if pattern_hash == text_hash:
                 # Проверка символов
-                if text[i:i + m] == pattern:
+                if text[i : i + m] == pattern:
                     matches.append(i)
 
             # Вычисление хеша следующего окна
@@ -154,14 +152,9 @@ class TextSearchAlgorithms:
             distance = difflib.SequenceMatcher(None, normalized_pattern, word).ratio()
 
             if distance >= (1 - max_distance / max(len(normalized_pattern), 1)):
-                matches.append({
-                    'word': word,
-                    'position': position,
-                    'distance': 1 - distance,
-                    'similarity': distance
-                })
+                matches.append({"word": word, "position": position, "distance": 1 - distance, "similarity": distance})
 
-        return sorted(matches, key=lambda x: x['similarity'], reverse=True)
+        return sorted(matches, key=lambda x: x["similarity"], reverse=True)
 
     @staticmethod
     def get_context(text: str, position: int, word_length: int, context_size: int = 50) -> Tuple[str, str]:
@@ -170,14 +163,14 @@ class TextSearchAlgorithms:
         end_context = min(len(text), position + word_length + context_size)
 
         context_before = text[start_context:position].strip()
-        context_after = text[position + word_length:end_context].strip()
+        context_after = text[position + word_length : end_context].strip()
 
         return context_before, context_after
 
     @staticmethod
     def word_boundary_search(text: str, pattern: str) -> List[int]:
         """Поиск по границам слов"""
-        pattern_regex = r'\b' + re.escape(pattern) + r'\b'
+        pattern_regex = r"\b" + re.escape(pattern) + r"\b"
         matches = []
 
         for match in re.finditer(pattern_regex, text, re.IGNORECASE):
@@ -193,12 +186,7 @@ class WordSearchService:
         self.algorithms = TextSearchAlgorithms()
 
     def search_words_in_document(
-            self,
-            document,
-            query: str,
-            search_type: str = 'combined',
-            user=None,
-            ip_address: Optional[str] = None
+        self, document, query: str, search_type: str = "combined", user=None, ip_address: Optional[str] = None
     ) -> Tuple[List[Dict], float]:
         """Основной метод поиска слов в документе"""
 
@@ -209,7 +197,7 @@ class WordSearchService:
 
         # Импортируем модели здесь, чтобы избежать циклических импортов
         try:
-            from doc_storage.models import WordMatch, SearchHistory
+            from doc_storage.models import SearchHistory, WordMatch
         except ImportError:
             # Fallback если импорт не удался
             WordMatch = None
@@ -225,21 +213,21 @@ class WordSearchService:
 
         all_matches = []
 
-        if search_type in ['exact', 'combined']:
+        if search_type in ["exact", "combined"]:
             exact_matches = self._exact_word_search(document, normalized_content, normalized_query)
             all_matches.extend(exact_matches)
 
-        if search_type in ['partial', 'combined']:
+        if search_type in ["partial", "combined"]:
             partial_matches = self._partial_word_search(document, normalized_content, normalized_query)
             all_matches.extend(partial_matches)
 
-        if search_type in ['fuzzy', 'combined']:
+        if search_type in ["fuzzy", "combined"]:
             fuzzy_matches = self._fuzzy_word_search(document, normalized_content, normalized_query)
             all_matches.extend(fuzzy_matches)
 
         # Удаляем дубликаты и сортируем по релевантности
         unique_matches = self._remove_duplicates(all_matches)
-        unique_matches.sort(key=lambda x: (-x['relevance_score'], x['position']))
+        unique_matches.sort(key=lambda x: (-x["relevance_score"], x["position"]))
 
         # Сохраняем результаты в базу данных
         if WordMatch:
@@ -261,33 +249,37 @@ class WordSearchService:
         kmp_positions = self.algorithms.kmp_search(text, query)
         for pos in kmp_positions:
             context_before, context_after = self.algorithms.get_context(text, pos, len(query))
-            matches.append({
-                'document': document,
-                'query': query,
-                'matched_word': query,
-                'position': pos,
-                'context_before': context_before,
-                'context_after': context_after,
-                'match_type': 'exact',
-                'relevance_score': 1.0,
-                'algorithm': 'KMP'
-            })
+            matches.append(
+                {
+                    "document": document,
+                    "query": query,
+                    "matched_word": query,
+                    "position": pos,
+                    "context_before": context_before,
+                    "context_after": context_after,
+                    "match_type": "exact",
+                    "relevance_score": 1.0,
+                    "algorithm": "KMP",
+                }
+            )
 
         # Поиск по границам слов (более точный для целых слов)
         word_positions = self.algorithms.word_boundary_search(text, query)
         for pos in word_positions:
             context_before, context_after = self.algorithms.get_context(text, pos, len(query))
-            matches.append({
-                'document': document,
-                'query': query,
-                'matched_word': query,
-                'position': pos,
-                'context_before': context_before,
-                'context_after': context_after,
-                'match_type': 'exact',
-                'relevance_score': 1.2,  # Более высокий рейтинг для границ слов
-                'algorithm': 'Word Boundary'
-            })
+            matches.append(
+                {
+                    "document": document,
+                    "query": query,
+                    "matched_word": query,
+                    "position": pos,
+                    "context_before": context_before,
+                    "context_after": context_after,
+                    "match_type": "exact",
+                    "relevance_score": 1.2,  # Более высокий рейтинг для границ слов
+                    "algorithm": "Word Boundary",
+                }
+            )
 
         return matches
 
@@ -310,17 +302,19 @@ class WordSearchService:
             matched_word = text[word_start:word_end]
             context_before, context_after = self.algorithms.get_context(text, word_start, len(matched_word))
 
-            matches.append({
-                'document': document,
-                'query': query,
-                'matched_word': matched_word,
-                'position': word_start,
-                'context_before': context_before,
-                'context_after': context_after,
-                'match_type': 'partial',
-                'relevance_score': 0.8,
-                'algorithm': 'Boyer-Moore'
-            })
+            matches.append(
+                {
+                    "document": document,
+                    "query": query,
+                    "matched_word": matched_word,
+                    "position": word_start,
+                    "context_before": context_before,
+                    "context_after": context_after,
+                    "match_type": "partial",
+                    "relevance_score": 0.8,
+                    "algorithm": "Boyer-Moore",
+                }
+            )
 
         # Rabin-Karp для дополнительной проверки
         rk_positions = self.algorithms.rabin_karp_search(text, query)
@@ -336,17 +330,19 @@ class WordSearchService:
             matched_word = text[word_start:word_end]
             context_before, context_after = self.algorithms.get_context(text, word_start, len(matched_word))
 
-            matches.append({
-                'document': document,
-                'query': query,
-                'matched_word': matched_word,
-                'position': word_start,
-                'context_before': context_before,
-                'context_after': context_after,
-                'match_type': 'partial',
-                'relevance_score': 0.7,
-                'algorithm': 'Rabin-Karp'
-            })
+            matches.append(
+                {
+                    "document": document,
+                    "query": query,
+                    "matched_word": matched_word,
+                    "position": word_start,
+                    "context_before": context_before,
+                    "context_after": context_after,
+                    "match_type": "partial",
+                    "relevance_score": 0.7,
+                    "algorithm": "Rabin-Karp",
+                }
+            )
 
         return matches
 
@@ -356,21 +352,21 @@ class WordSearchService:
         fuzzy_results = self.algorithms.fuzzy_search(text, query, max_distance=2)
 
         for result in fuzzy_results[:10]:  # Ограничиваем количество нечетких совпадений
-            context_before, context_after = self.algorithms.get_context(
-                text, result['position'], len(result['word'])
-            )
+            context_before, context_after = self.algorithms.get_context(text, result["position"], len(result["word"]))
 
-            matches.append({
-                'document': document,
-                'query': query,
-                'matched_word': result['word'],
-                'position': result['position'],
-                'context_before': context_before,
-                'context_after': context_after,
-                'match_type': 'fuzzy',
-                'relevance_score': result['similarity'],
-                'algorithm': 'Fuzzy'
-            })
+            matches.append(
+                {
+                    "document": document,
+                    "query": query,
+                    "matched_word": result["word"],
+                    "position": result["position"],
+                    "context_before": context_before,
+                    "context_after": context_after,
+                    "match_type": "fuzzy",
+                    "relevance_score": result["similarity"],
+                    "algorithm": "Fuzzy",
+                }
+            )
 
         return matches
 
@@ -381,7 +377,7 @@ class WordSearchService:
 
         for match in matches:
             # Создаем ключ для уникальности на основе позиции и слова
-            key = (match['position'], match['matched_word'])
+            key = (match["position"], match["matched_word"])
 
             if key not in seen:
                 seen.add(key)
@@ -400,12 +396,12 @@ class WordSearchService:
                 word_match = WordMatch(
                     document=document,
                     query=query,
-                    matched_word=match['matched_word'],
-                    position=match['position'],
-                    context_before=match['context_before'][:200],
-                    context_after=match['context_after'][:200],
-                    match_type=match['match_type'],
-                    relevance_score=match['relevance_score']
+                    matched_word=match["matched_word"],
+                    position=match["position"],
+                    context_before=match["context_before"][:200],
+                    context_after=match["context_after"][:200],
+                    match_type=match["match_type"],
+                    relevance_score=match["relevance_score"],
                 )
                 word_matches.append(word_match)
 
@@ -414,13 +410,7 @@ class WordSearchService:
             print(f"Ошибка сохранения совпадений: {e}")
 
     def _save_search_history(
-            self,
-            query: str,
-            document,
-            results_count: int,
-            search_time: float,
-            user=None,
-            ip_address: Optional[str] = None
+        self, query: str, document, results_count: int, search_time: float, user=None, ip_address: Optional[str] = None
     ) -> None:
         """Сохранение истории поиска"""
         try:
@@ -432,7 +422,7 @@ class WordSearchService:
                 user=user,
                 results_count=results_count,
                 search_time=search_time,
-                ip_address=ip_address
+                ip_address=ip_address,
             )
         except Exception as e:
             print(f"Ошибка сохранения истории поиска: {e}")
@@ -442,10 +432,7 @@ class WordSearchService:
         try:
             from doc_storage.models import WordMatch
 
-            return WordMatch.objects.filter(
-                document=document,
-                query=query
-            ).order_by('-relevance_score', 'position')
+            return WordMatch.objects.filter(document=document, query=query).order_by("-relevance_score", "position")
         except Exception as e:
             print(f"Ошибка получения результатов поиска: {e}")
             return []

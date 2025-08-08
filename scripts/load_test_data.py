@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import os
 import sys
-import django
 from pathlib import Path
+
+import django
 
 
 def setup_django():
@@ -10,13 +11,13 @@ def setup_django():
     # Определяем пути
     current_dir = Path(__file__).resolve().parent
     project_root = current_dir.parent
-    src_dir = project_root / 'src'
+    src_dir = project_root / "src"
 
     # Добавляем src директорию в sys.path
     sys.path.insert(0, str(src_dir))
 
     # Настройка Django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'document_search.settings')
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "document_search.settings")
 
     # Переходим в src директорию для правильной работы Django
     os.chdir(src_dir)
@@ -35,87 +36,83 @@ def create_test_data():
     # Импортируем модели ПОСЛЕ setup Django
     try:
         from django.contrib.auth.models import User
-        from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation
+
+        from doc_storage.models import (Document, DocumentCategory,
+                                        DocumentTag, DocumentTagRelation)
     except ImportError as e:
         print(f"Ошибка импорта моделей: {e}")
         return False
 
     try:
         # Проверяем, есть ли уже данные
-        if User.objects.filter(username='admin').exists():
+        if User.objects.filter(username="admin").exists():
             print("Тестовые данные уже существуют, пропускаем создание")
             return True
 
         # Создание пользователей
         admin_user, created = User.objects.get_or_create(
-            username='admin',
+            username="admin",
             defaults={
-                'email': 'admin@example.com',
-                'first_name': 'Администратор',
-                'last_name': 'Системы',
-                'is_staff': True,
-                'is_superuser': True
-            }
+                "email": "admin@example.com",
+                "first_name": "Администратор",
+                "last_name": "Системы",
+                "is_staff": True,
+                "is_superuser": True,
+            },
         )
         if created:
-            admin_user.set_password('admin123')
+            admin_user.set_password("admin123")
             admin_user.save()
             print(f"Создан пользователь: {admin_user.username}")
 
         author_user, created = User.objects.get_or_create(
-            username='author',
-            defaults={
-                'email': 'author@example.com',
-                'first_name': 'Автор',
-                'last_name': 'Документов'
-            }
+            username="author",
+            defaults={"email": "author@example.com", "first_name": "Автор", "last_name": "Документов"},
         )
         if created:
-            author_user.set_password('author123')
+            author_user.set_password("author123")
             author_user.save()
             print(f"Создан пользователь: {author_user.username}")
 
         # Создание категорий
         categories_data = [
-            {'name': 'Программирование', 'description': 'Статьи о языках программирования и разработке'},
-            {'name': 'Алгоритмы', 'description': 'Алгоритмы и структуры данных'},
-            {'name': 'Веб-разработка', 'description': 'Современные веб-технологии'},
+            {"name": "Программирование", "description": "Статьи о языках программирования и разработке"},
+            {"name": "Алгоритмы", "description": "Алгоритмы и структуры данных"},
+            {"name": "Веб-разработка", "description": "Современные веб-технологии"},
         ]
 
         categories = {}
         for cat_data in categories_data:
             category, created = DocumentCategory.objects.get_or_create(
-                name=cat_data['name'],
-                defaults={'description': cat_data['description']}
+                name=cat_data["name"], defaults={"description": cat_data["description"]}
             )
-            categories[cat_data['name']] = category
+            categories[cat_data["name"]] = category
             if created:
                 print(f"Создана категория: {category.name}")
 
         # Создание тегов
         tags_data = [
-            {'name': 'python', 'color': '#3776ab'},
-            {'name': 'javascript', 'color': '#f7df1e'},
-            {'name': 'алгоритмы', 'color': '#45b7d1'},
-            {'name': 'веб', 'color': '#ff6b6b'},
-            {'name': 'данные', 'color': '#4ecdc4'},
+            {"name": "python", "color": "#3776ab"},
+            {"name": "javascript", "color": "#f7df1e"},
+            {"name": "алгоритмы", "color": "#45b7d1"},
+            {"name": "веб", "color": "#ff6b6b"},
+            {"name": "данные", "color": "#4ecdc4"},
         ]
 
         tags = {}
         for tag_data in tags_data:
             tag, created = DocumentTag.objects.get_or_create(
-                name=tag_data['name'],
-                defaults={'color': tag_data['color']}
+                name=tag_data["name"], defaults={"color": tag_data["color"]}
             )
-            tags[tag_data['name']] = tag
+            tags[tag_data["name"]] = tag
             if created:
                 print(f"Создан тег: {tag.name}")
 
         # Создание документов с богатым содержимым для поиска слов
         documents_data = [
             {
-                'title': 'Введение в Python программирование',
-                'content': '''Python - это высокоуровневый интерпретируемый язык программирования общего назначения.
+                "title": "Введение в Python программирование",
+                "content": """Python - это высокоуровневый интерпретируемый язык программирования общего назначения.
 Python был создан Гвидо ван Россумом и впервые выпущен в 1991 году.
 
 Основные особенности Python:
@@ -146,14 +143,15 @@ Python также поддерживает объектно-ориентиров
 - Pandas для анализа данных
 - Matplotlib для визуализации
 
-Изучение Python открывает множество возможностей для разработчика.''',
-                'category': 'Программирование',
-                'tags': ['python', 'алгоритмы'],
-                'author': author_user
+Изучение Python открывает множество возможностей для разработчика.""",
+                "category": "Программирование",
+                "tags": ["python", "алгоритмы"],
+                "author": author_user,
             },
             {
-                'title': 'JavaScript и современная веб-разработка',
-                'content': '''JavaScript - динамический язык программирования, который является одной из основных технологий веб-разработки.
+                "title": "JavaScript и современная веб-разработка",
+                "content": """JavaScript - динамический язык программирования, 
+                который является одной из основных технологий веб-разработки.
 JavaScript был создан Бренданом Айком в 1995 году для браузера Netscape Navigator.
 
 Современная веб-разработка с JavaScript включает:
@@ -185,14 +183,15 @@ Backend разработка с Node.js:
 JavaScript непрерывно развивается. Новые возможности добавляются ежегодно.
 Изучение JavaScript открывает путь к full-stack разработке.
 
-Веб-программирование с JavaScript позволяет создавать интерактивные веб-приложения.''',
-                'category': 'Веб-разработка',
-                'tags': ['javascript', 'веб'],
-                'author': author_user
+Веб-программирование с JavaScript позволяет создавать интерактивные веб-приложения.""",
+                "category": "Веб-разработка",
+                "tags": ["javascript", "веб"],
+                "author": author_user,
             },
             {
-                'title': 'Алгоритмы поиска и сортировки',
-                'content': '''Алгоритмы поиска и сортировки являются фундаментальными в программировании и компьютерных науках.
+                "title": "Алгоритмы поиска и сортировки",
+                "content": """Алгоритмы поиска и сортировки являются 
+                фундаментальными в программировании и компьютерных науках.
 Эффективные алгоритмы критически важны для производительности приложений.
 
 Алгоритмы поиска:
@@ -235,14 +234,14 @@ JavaScript непрерывно развивается. Новые возмож�
 - Стабильности сортировки
 - Характера входных данных
 
-Алгоритмические навыки необходимы каждому программисту для решения сложных задач.''',
-                'category': 'Алгоритмы',
-                'tags': ['алгоритмы', 'данные'],
-                'author': admin_user
+Алгоритмические навыки необходимы каждому программисту для решения сложных задач.""",
+                "category": "Алгоритмы",
+                "tags": ["алгоритмы", "данные"],
+                "author": admin_user,
             },
             {
-                'title': 'Структуры данных в программировании',
-                'content': '''Структуры данных - это способы организации и хранения данных в памяти компьютера.
+                "title": "Структуры данных в программировании",
+                "content": """Структуры данных - это способы организации и хранения данных в памяти компьютера.
 Выбор правильной структуры данных критически важен для эффективности программы.
 
 Основные структуры данных:
@@ -287,34 +286,31 @@ JavaScript непрерывно развивается. Новые возмож�
 - Использование памяти
 - Сложность реализации
 
-Программист должен понимать компромиссы между различными структурами данных.''',
-                'category': 'Алгоритмы',
-                'tags': ['алгоритмы', 'данные'],
-                'author': admin_user
+Программист должен понимать компромиссы между различными структурами данных.""",
+                "category": "Алгоритмы",
+                "tags": ["алгоритмы", "данные"],
+                "author": admin_user,
             },
         ]
 
         # Создание документов с тегами
         for doc_data in documents_data:
             document, created = Document.objects.get_or_create(
-                title=doc_data['title'],
+                title=doc_data["title"],
                 defaults={
-                    'content': doc_data['content'],
-                    'category': categories[doc_data['category']],
-                    'author': doc_data['author']
-                }
+                    "content": doc_data["content"],
+                    "category": categories[doc_data["category"]],
+                    "author": doc_data["author"],
+                },
             )
 
             if created:
                 print(f"Создан документ: {document.title}")
 
                 # Добавляем теги к документу
-                for tag_name in doc_data['tags']:
+                for tag_name in doc_data["tags"]:
                     if tag_name in tags:
-                        DocumentTagRelation.objects.get_or_create(
-                            document=document,
-                            tag=tags[tag_name]
-                        )
+                        DocumentTagRelation.objects.get_or_create(document=document, tag=tags[tag_name])
 
         print("\n=== ТЕСТОВЫЕ ДАННЫЕ СОЗДАНЫ ===")
         print(f"Категорий: {DocumentCategory.objects.count()}")
@@ -339,6 +335,7 @@ JavaScript непрерывно развивается. Новые возмож�
     except Exception as e:
         print(f"Ошибка создания тестовых данных: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -359,5 +356,5 @@ def main():
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

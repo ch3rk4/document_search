@@ -1,7 +1,5 @@
-from django.db import models
 from django.contrib.auth.models import User
-from django.utils import timezone
-from typing import Optional
+from django.db import models
 
 
 class DocumentCategory(models.Model):
@@ -14,7 +12,7 @@ class DocumentCategory(models.Model):
     class Meta:
         verbose_name = "Категория документа"
         verbose_name_plural = "Категории документов"
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
@@ -25,13 +23,9 @@ class Document(models.Model):
 
     title = models.CharField(max_length=255, verbose_name="Заголовок")
     content = models.TextField(verbose_name="Содержимое документа")
-    file_path = models.FileField(upload_to='documents/', blank=True, null=True, verbose_name="Файл")
+    file_path = models.FileField(upload_to="documents/", blank=True, null=True, verbose_name="Файл")
     category = models.ForeignKey(
-        DocumentCategory,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="Категория"
+        DocumentCategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Категория"
     )
     author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
@@ -45,12 +39,12 @@ class Document(models.Model):
     class Meta:
         verbose_name = "Документ"
         verbose_name_plural = "Документы"
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['title']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['category']),
-            models.Index(fields=['author']),
+            models.Index(fields=["title"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["author"]),
         ]
 
     def __str__(self) -> str:
@@ -73,7 +67,7 @@ class DocumentTag(models.Model):
     class Meta:
         verbose_name = "Тег"
         verbose_name_plural = "Теги"
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self) -> str:
         return self.name
@@ -82,12 +76,12 @@ class DocumentTag(models.Model):
 class DocumentTagRelation(models.Model):
     """Связь документов и тегов"""
 
-    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name='tag_relations')
-    tag = models.ForeignKey(DocumentTag, on_delete=models.CASCADE, related_name='document_relations')
+    document = models.ForeignKey(Document, on_delete=models.CASCADE, related_name="tag_relations")
+    tag = models.ForeignKey(DocumentTag, on_delete=models.CASCADE, related_name="document_relations")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ['document', 'tag']
+        unique_together = ["document", "tag"]
         verbose_name = "Связь документ-тег"
         verbose_name_plural = "Связи документов и тегов"
 
@@ -107,12 +101,12 @@ class WordMatch(models.Model):
     match_type = models.CharField(
         max_length=20,
         choices=[
-            ('exact', 'Точное совпадение'),
-            ('partial', 'Частичное совпадение'),
-            ('fuzzy', 'Нечеткое совпадение'),
+            ("exact", "Точное совпадение"),
+            ("partial", "Частичное совпадение"),
+            ("fuzzy", "Нечеткое совпадение"),
         ],
-        default='exact',
-        verbose_name="Тип совпадения"
+        default="exact",
+        verbose_name="Тип совпадения",
     )
     relevance_score = models.FloatField(default=1.0, verbose_name="Релевантность")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата поиска")
@@ -120,11 +114,11 @@ class WordMatch(models.Model):
     class Meta:
         verbose_name = "Найденное слово"
         verbose_name_plural = "Найденные слова"
-        ordering = ['-relevance_score', 'position']
+        ordering = ["-relevance_score", "position"]
         indexes = [
-            models.Index(fields=['document', 'query']),
-            models.Index(fields=['matched_word']),
-            models.Index(fields=['position']),
+            models.Index(fields=["document", "query"]),
+            models.Index(fields=["matched_word"]),
+            models.Index(fields=["position"]),
         ]
 
     def __str__(self) -> str:
@@ -145,12 +139,12 @@ class SearchHistory(models.Model):
     class Meta:
         verbose_name = "История поиска"
         verbose_name_plural = "История поисков"
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
         indexes = [
-            models.Index(fields=['query']),
-            models.Index(fields=['document']),
-            models.Index(fields=['created_at']),
-            models.Index(fields=['user']),
+            models.Index(fields=["query"]),
+            models.Index(fields=["document"]),
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["user"]),
         ]
 
     def __str__(self) -> str:

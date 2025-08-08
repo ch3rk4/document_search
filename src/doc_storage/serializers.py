@@ -1,6 +1,8 @@
-from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Document, DocumentCategory, DocumentTag, DocumentTagRelation, SearchHistory, WordMatch
+from rest_framework import serializers
+
+from .models import (Document, DocumentCategory, DocumentTag,
+                     DocumentTagRelation, SearchHistory, WordMatch)
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -8,8 +10,8 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
-        read_only_fields = ['id']
+        fields = ["id", "username", "first_name", "last_name", "email"]
+        read_only_fields = ["id"]
 
 
 class DocumentCategorySerializer(serializers.ModelSerializer):
@@ -19,8 +21,8 @@ class DocumentCategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentCategory
-        fields = ['id', 'name', 'description', 'created_at', 'document_count']
-        read_only_fields = ['id', 'created_at']
+        fields = ["id", "name", "description", "created_at", "document_count"]
+        read_only_fields = ["id", "created_at"]
 
     def get_document_count(self, obj: DocumentCategory) -> int:
         """Подсчет количества документов в категории"""
@@ -32,8 +34,8 @@ class DocumentTagSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = DocumentTag
-        fields = ['id', 'name', 'color', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ["id", "name", "color", "created_at"]
+        read_only_fields = ["id", "created_at"]
 
 
 class DocumentSerializer(serializers.ModelSerializer):
@@ -42,44 +44,50 @@ class DocumentSerializer(serializers.ModelSerializer):
     author = UserSerializer(read_only=True)
     category = DocumentCategorySerializer(read_only=True)
     category_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    tags = DocumentTagSerializer(source='tag_relations.tag', many=True, read_only=True)
-    tag_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False,
-        allow_empty=True
-    )
+    tags = DocumentTagSerializer(source="tag_relations.tag", many=True, read_only=True)
+    tag_ids = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False, allow_empty=True)
     file_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Document
         fields = [
-            'id', 'title', 'content', 'file_path', 'file_url',
-            'category', 'category_id', 'author', 'created_at',
-            'updated_at', 'is_active', 'word_count', 'tags', 'tag_ids'
+            "id",
+            "title",
+            "content",
+            "file_path",
+            "file_url",
+            "category",
+            "category_id",
+            "author",
+            "created_at",
+            "updated_at",
+            "is_active",
+            "word_count",
+            "tags",
+            "tag_ids",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'word_count', 'author']
+        read_only_fields = ["id", "created_at", "updated_at", "word_count", "author"]
 
     def get_file_url(self, obj: Document) -> str:
         """Получение URL файла документа"""
         if obj.file_path:
-            request = self.context.get('request')
+            request = self.context.get("request")
             if request:
                 return request.build_absolute_uri(obj.file_path.url)
         return ""
 
     def create(self, validated_data: dict) -> Document:
         """Создание документа с тегами"""
-        tag_ids = validated_data.pop('tag_ids', [])
-        category_id = validated_data.pop('category_id', None)
+        tag_ids = validated_data.pop("tag_ids", [])
+        category_id = validated_data.pop("category_id", None)
 
         if category_id:
-            validated_data['category_id'] = category_id
+            validated_data["category_id"] = category_id
 
         # Устанавливаем автора из контекста запроса
-        request = self.context.get('request')
+        request = self.context.get("request")
         if request and request.user:
-            validated_data['author'] = request.user
+            validated_data["author"] = request.user
 
         document = Document.objects.create(**validated_data)
 
@@ -90,11 +98,11 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def update(self, instance: Document, validated_data: dict) -> Document:
         """Обновление документа с тегами"""
-        tag_ids = validated_data.pop('tag_ids', None)
-        category_id = validated_data.pop('category_id', None)
+        tag_ids = validated_data.pop("tag_ids", None)
+        category_id = validated_data.pop("category_id", None)
 
         if category_id is not None:
-            validated_data['category_id'] = category_id
+            validated_data["category_id"] = category_id
 
         # Обновляем поля документа
         for attr, value in validated_data.items():
@@ -124,18 +132,25 @@ class DocumentSerializer(serializers.ModelSerializer):
 class DocumentListSerializer(serializers.ModelSerializer):
     """Упрощенный сериализатор для списка документов"""
 
-    author_name = serializers.CharField(source='author.username', read_only=True)
-    category_name = serializers.CharField(source='category.name', read_only=True)
+    author_name = serializers.CharField(source="author.username", read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
     tags_count = serializers.SerializerMethodField()
     content_preview = serializers.SerializerMethodField()
 
     class Meta:
         model = Document
         fields = [
-            'id', 'title', 'author_name', 'category_name',
-            'created_at', 'updated_at', 'word_count', 'tags_count', 'content_preview'
+            "id",
+            "title",
+            "author_name",
+            "category_name",
+            "created_at",
+            "updated_at",
+            "word_count",
+            "tags_count",
+            "content_preview",
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'word_count']
+        read_only_fields = ["id", "created_at", "updated_at", "word_count"]
 
     def get_tags_count(self, obj: Document) -> int:
         """Подсчет количества тегов у документа"""
@@ -149,16 +164,24 @@ class DocumentListSerializer(serializers.ModelSerializer):
 class WordMatchSerializer(serializers.ModelSerializer):
     """Сериализатор для найденных слов"""
 
-    document_title = serializers.CharField(source='document.title', read_only=True)
+    document_title = serializers.CharField(source="document.title", read_only=True)
 
     class Meta:
         model = WordMatch
         fields = [
-            'id', 'document', 'document_title', 'query', 'matched_word',
-            'position', 'context_before', 'context_after', 'match_type',
-            'relevance_score', 'created_at'
+            "id",
+            "document",
+            "document_title",
+            "query",
+            "matched_word",
+            "position",
+            "context_before",
+            "context_after",
+            "match_type",
+            "relevance_score",
+            "created_at",
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ["id", "created_at"]
 
 
 class WordSearchResultSerializer(serializers.Serializer):
@@ -185,26 +208,30 @@ class DocumentWordCloudSerializer(serializers.Serializer):
     """Сериализатор для облака слов документа"""
 
     document = DocumentListSerializer(read_only=True)
-    word_frequencies = serializers.DictField(
-        child=serializers.IntegerField(),
-        read_only=True
-    )
+    word_frequencies = serializers.DictField(child=serializers.IntegerField(), read_only=True)
     total_unique_words = serializers.IntegerField(read_only=True)
 
 
 class SearchHistorySerializer(serializers.ModelSerializer):
     """Сериализатор для истории поиска"""
 
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    document_title = serializers.CharField(source='document.title', read_only=True)
+    user_name = serializers.CharField(source="user.username", read_only=True)
+    document_title = serializers.CharField(source="document.title", read_only=True)
 
     class Meta:
         model = SearchHistory
         fields = [
-            'id', 'query', 'document', 'document_title', 'user_name',
-            'results_count', 'search_time', 'created_at', 'ip_address'
+            "id",
+            "query",
+            "document",
+            "document_title",
+            "user_name",
+            "results_count",
+            "search_time",
+            "created_at",
+            "ip_address",
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ["id", "created_at"]
 
 
 class SearchStatisticsSerializer(serializers.Serializer):
@@ -213,12 +240,8 @@ class SearchStatisticsSerializer(serializers.Serializer):
     total_searches = serializers.IntegerField(read_only=True)
     total_documents = serializers.IntegerField(read_only=True)
     average_search_time = serializers.FloatField(read_only=True)
-    most_searched_words = serializers.ListField(
-        child=serializers.DictField(), read_only=True
-    )
-    documents_with_searches = serializers.ListField(
-        child=serializers.DictField(), read_only=True
-    )
+    most_searched_words = serializers.ListField(child=serializers.DictField(), read_only=True)
+    documents_with_searches = serializers.ListField(child=serializers.DictField(), read_only=True)
 
 
 class DocumentAnalysisSerializer(serializers.Serializer):
@@ -227,9 +250,7 @@ class DocumentAnalysisSerializer(serializers.Serializer):
     document = DocumentListSerializer(read_only=True)
     readability_score = serializers.FloatField(read_only=True)
     complexity_score = serializers.FloatField(read_only=True)
-    most_common_words = serializers.ListField(
-        child=serializers.DictField(), read_only=True
-    )
+    most_common_words = serializers.ListField(child=serializers.DictField(), read_only=True)
     sentence_count = serializers.IntegerField(read_only=True)
     paragraph_count = serializers.IntegerField(read_only=True)
     average_word_length = serializers.FloatField(read_only=True)

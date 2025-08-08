@@ -1,15 +1,16 @@
 """
 Сервис для извлечения текста из различных типов файлов
 """
-import os
 import mimetypes
-import tempfile
+import os
 import re
-from typing import Optional, Tuple
+import tempfile
 from pathlib import Path
+from typing import Optional, Tuple
 
 try:
     import chardet
+
     CHARDET_AVAILABLE = True
 except ImportError:
     chardet = None
@@ -17,6 +18,7 @@ except ImportError:
 
 try:
     import docx
+
     DOCX_AVAILABLE = True
 except ImportError:
     docx = None
@@ -24,6 +26,7 @@ except ImportError:
 
 try:
     import PyPDF2
+
     PDF_AVAILABLE = True
 except ImportError:
     PyPDF2 = None
@@ -31,6 +34,7 @@ except ImportError:
 
 try:
     import openpyxl
+
     EXCEL_AVAILABLE = True
 except ImportError:
     openpyxl = None
@@ -38,6 +42,7 @@ except ImportError:
 
 try:
     from pptx import Presentation
+
     PPTX_AVAILABLE = True
 except ImportError:
     Presentation = None
@@ -48,15 +53,20 @@ class FileTextExtractor:
     """Класс для извлечения текста из различных типов файлов"""
 
     SUPPORTED_EXTENSIONS = {
-        '.txt', '.text',
-        '.docx',
-        '.pdf',
-        '.xlsx', '.xls',
-        '.pptx',
-        '.csv',
-        '.md', '.markdown',
-        '.rtf',
-        '.xml', '.html', '.htm'
+        ".txt",
+        ".text",
+        ".docx",
+        ".pdf",
+        ".xlsx",
+        ".xls",
+        ".pptx",
+        ".csv",
+        ".md",
+        ".markdown",
+        ".rtf",
+        ".xml",
+        ".html",
+        ".htm",
     }
 
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
@@ -73,20 +83,20 @@ class FileTextExtractor:
         file_path = Path(file_path)
 
         if not file_path.exists():
-            return {'error': 'Файл не найден'}
+            return {"error": "Файл не найден"}
 
         file_size = file_path.stat().st_size
         if file_size > cls.MAX_FILE_SIZE:
-            return {'error': f'Файл слишком большой (максимум {cls.MAX_FILE_SIZE // (1024 * 1024)}MB)'}
+            return {"error": f"Файл слишком большой (максимум {cls.MAX_FILE_SIZE // (1024 * 1024)}MB)"}
 
         mime_type, _ = mimetypes.guess_type(str(file_path))
 
         return {
-            'name': file_path.name,
-            'size': file_size,
-            'extension': file_path.suffix.lower(),
-            'mime_type': mime_type,
-            'supported': cls.is_supported_file(str(file_path))
+            "name": file_path.name,
+            "size": file_size,
+            "extension": file_path.suffix.lower(),
+            "mime_type": mime_type,
+            "supported": cls.is_supported_file(str(file_path)),
         }
 
     @classmethod
@@ -98,28 +108,28 @@ class FileTextExtractor:
         try:
             file_info = cls.get_file_info(file_path)
 
-            if 'error' in file_info:
-                return None, file_info['error']
+            if "error" in file_info:
+                return None, file_info["error"]
 
-            if not file_info['supported']:
+            if not file_info["supported"]:
                 return None, f"Неподдерживаемый тип файла: {file_info['extension']}"
 
-            extension = file_info['extension']
+            extension = file_info["extension"]
 
             # Обработка различных типов файлов
-            if extension in ['.txt', '.text', '.md', '.markdown']:
+            if extension in [".txt", ".text", ".md", ".markdown"]:
                 return cls._extract_from_text_file(file_path)
-            elif extension == '.docx':
+            elif extension == ".docx":
                 return cls._extract_from_docx(file_path)
-            elif extension == '.pdf':
+            elif extension == ".pdf":
                 return cls._extract_from_pdf(file_path)
-            elif extension in ['.xlsx', '.xls']:
+            elif extension in [".xlsx", ".xls"]:
                 return cls._extract_from_excel(file_path)
-            elif extension == '.pptx':
+            elif extension == ".pptx":
                 return cls._extract_from_powerpoint(file_path)
-            elif extension == '.csv':
+            elif extension == ".csv":
                 return cls._extract_from_csv(file_path)
-            elif extension in ['.xml', '.html', '.htm']:
+            elif extension in [".xml", ".html", ".htm"]:
                 return cls._extract_from_markup(file_path)
             else:
                 return None, f"Обработчик для {extension} файлов не реализован"
@@ -132,19 +142,19 @@ class FileTextExtractor:
         """Определение кодировки файла"""
         try:
             if CHARDET_AVAILABLE:
-                with open(file_path, 'rb') as file:
+                with open(file_path, "rb") as file:
                     raw_data = file.read(10000)  # Читаем первые 10KB
                     result = chardet.detect(raw_data)
-                    encoding = result.get('encoding', 'utf-8')
+                    encoding = result.get("encoding", "utf-8")
                     if encoding is None:
-                        encoding = 'utf-8'
+                        encoding = "utf-8"
                     # Проверяем на популярные кодировки
-                    if encoding.lower() in ['windows-1251', 'cp1251']:
-                        return 'windows-1251'
+                    if encoding.lower() in ["windows-1251", "cp1251"]:
+                        return "windows-1251"
                     return encoding
         except Exception:
             pass
-        return 'utf-8'
+        return "utf-8"
 
     @classmethod
     def _extract_from_text_file(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
@@ -153,11 +163,11 @@ class FileTextExtractor:
             encoding = cls._detect_encoding(file_path)
 
             # Пробуем разные кодировки
-            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251', 'latin-1']
+            encodings_to_try = [encoding, "utf-8", "windows-1251", "cp1251", "latin-1"]
 
             for enc in encodings_to_try:
                 try:
-                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                    with open(file_path, "r", encoding=enc, errors="ignore") as file:
                         content = file.read()
 
                     if content.strip():
@@ -194,7 +204,7 @@ class FileTextExtractor:
                         if text:
                             paragraphs.append(text)
 
-            content = '\n\n'.join(paragraphs)
+            content = "\n\n".join(paragraphs)
 
             if not content.strip():
                 return None, "Документ Word не содержит текста"
@@ -211,7 +221,7 @@ class FileTextExtractor:
             return None, "Для работы с PDF файлами установите библиотеку: pip install PyPDF2"
 
         try:
-            with open(file_path, 'rb') as file:
+            with open(file_path, "rb") as file:
                 pdf_reader = PyPDF2.PdfReader(file)
 
                 if len(pdf_reader.pages) == 0:
@@ -226,7 +236,7 @@ class FileTextExtractor:
                     except Exception:
                         continue  # Пропускаем проблемные страницы
 
-                content = '\n\n'.join(pages_text)
+                content = "\n\n".join(pages_text)
 
                 if not content.strip():
                     return None, "PDF файл не содержит извлекаемого текста"
@@ -257,12 +267,12 @@ class FileTextExtractor:
                         if cell_value is not None:
                             row_text.append(str(cell_value))
                     if row_text:
-                        sheet_text.append(' | '.join(row_text))
+                        sheet_text.append(" | ".join(row_text))
 
                 if sheet_text:
-                    sheets_text.append(f"=== Лист: {sheet_name} ===\n" + '\n'.join(sheet_text))
+                    sheets_text.append(f"=== Лист: {sheet_name} ===\n" + "\n".join(sheet_text))
 
-            content = '\n\n'.join(sheets_text)
+            content = "\n\n".join(sheets_text)
 
             if not content.strip():
                 return None, "Excel файл не содержит данных"
@@ -290,9 +300,9 @@ class FileTextExtractor:
                         slide_text.append(shape.text.strip())
 
                 if len(slide_text) > 1:  # Больше чем только заголовок слайда
-                    slides_text.append('\n'.join(slide_text))
+                    slides_text.append("\n".join(slide_text))
 
-            content = '\n\n'.join(slides_text)
+            content = "\n\n".join(slides_text)
 
             if not content.strip():
                 return None, "PowerPoint файл не содержит текста"
@@ -309,11 +319,11 @@ class FileTextExtractor:
             encoding = cls._detect_encoding(file_path)
 
             # Пробуем разные кодировки для CSV
-            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251']
+            encodings_to_try = [encoding, "utf-8", "windows-1251", "cp1251"]
 
             for enc in encodings_to_try:
                 try:
-                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                    with open(file_path, "r", encoding=enc, errors="ignore") as file:
                         lines = file.readlines()
                     break
                 except UnicodeDecodeError:
@@ -325,7 +335,7 @@ class FileTextExtractor:
                 return None, "CSV файл пустой"
 
             # Обрабатываем CSV как текст с разделителями
-            content = ''.join(lines)
+            content = "".join(lines)
 
             return content, None
 
@@ -338,11 +348,11 @@ class FileTextExtractor:
         try:
             encoding = cls._detect_encoding(file_path)
 
-            encodings_to_try = [encoding, 'utf-8', 'windows-1251', 'cp1251']
+            encodings_to_try = [encoding, "utf-8", "windows-1251", "cp1251"]
 
             for enc in encodings_to_try:
                 try:
-                    with open(file_path, 'r', encoding=enc, errors='ignore') as file:
+                    with open(file_path, "r", encoding=enc, errors="ignore") as file:
                         content = file.read()
                     break
                 except UnicodeDecodeError:
@@ -351,8 +361,8 @@ class FileTextExtractor:
                 return None, "Не удалось прочитать HTML/XML файл"
 
             # Простое удаление HTML тегов
-            text = re.sub(r'<[^>]+>', ' ', content)
-            text = re.sub(r'\s+', ' ', text).strip()
+            text = re.sub(r"<[^>]+>", " ", content)
+            text = re.sub(r"\s+", " ", text).strip()
 
             if not text:
                 return None, "HTML/XML файл не содержит текста"
@@ -369,8 +379,9 @@ class DocumentFileService:
     def __init__(self):
         self.extractor = FileTextExtractor()
 
-    def create_document_from_file(self, uploaded_file, title: str = None, category=None, author=None) -> Tuple[
-        Optional['Document'], Optional[str]]:
+    def create_document_from_file(
+        self, uploaded_file, title: str = None, category=None, author=None
+    ) -> Tuple[Optional["Document"], Optional[str]]:
         """
         Создание документа из загруженного файла
 
@@ -414,11 +425,7 @@ class DocumentFileService:
 
                 # Создаем документ
                 document = Document.objects.create(
-                    title=title,
-                    content=extracted_text,
-                    file_path=uploaded_file,
-                    category=category,
-                    author=author
+                    title=title, content=extracted_text, file_path=uploaded_file, category=category, author=author
                 )
 
                 return document, None
@@ -437,10 +444,7 @@ class DocumentFileService:
         """Сохранение временного файла для обработки"""
         # Создаем временный файл с правильным расширением
         file_extension = Path(uploaded_file.name).suffix
-        temp_file = tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=file_extension
-        )
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_extension)
 
         # Записываем содержимое
         for chunk in uploaded_file.chunks():
@@ -498,13 +502,13 @@ class DocumentFileService:
     def get_supported_formats_info(self) -> dict:
         """Получение информации о поддерживаемых форматах"""
         return {
-            'extensions': list(self.extractor.SUPPORTED_EXTENSIONS),
-            'max_file_size_mb': self.extractor.MAX_FILE_SIZE // (1024 * 1024),
-            'available_extractors': {
-                'docx': DOCX_AVAILABLE,
-                'pdf': PDF_AVAILABLE,
-                'excel': EXCEL_AVAILABLE,
-                'powerpoint': PPTX_AVAILABLE,
-                'chardet': CHARDET_AVAILABLE,
-            }
+            "extensions": list(self.extractor.SUPPORTED_EXTENSIONS),
+            "max_file_size_mb": self.extractor.MAX_FILE_SIZE // (1024 * 1024),
+            "available_extractors": {
+                "docx": DOCX_AVAILABLE,
+                "pdf": PDF_AVAILABLE,
+                "excel": EXCEL_AVAILABLE,
+                "powerpoint": PPTX_AVAILABLE,
+                "chardet": CHARDET_AVAILABLE,
+            },
         }

@@ -4,14 +4,15 @@
 """
 import os
 import sys
-import django
 from pathlib import Path
+
+import django
 
 # Добавляем src директорию в sys.path
 current_dir = Path(__file__).resolve().parent
 project_root = current_dir.parent
-src_dir = project_root / 'src'
-tests_dir = project_root / 'tests'
+src_dir = project_root / "src"
+tests_dir = project_root / "tests"
 
 sys.path.insert(0, str(src_dir))
 sys.path.insert(0, str(project_root))
@@ -20,17 +21,17 @@ sys.path.insert(0, str(project_root))
 os.chdir(src_dir)
 
 # Устанавливаем настройки Django для тестов
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'document_search.test_settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "document_search.test_settings")
 
 # Инициализируем Django
 django.setup()
 
 # Запускаем тесты
-if __name__ == '__main__':
+if __name__ == "__main__":
     from django.core.management import execute_from_command_line
 
     # Аргументы для запуска тестов - указываем путь к тестам
-    test_args = ['manage.py', 'test', str(tests_dir)]
+    test_args = ["manage.py", "test", str(tests_dir)]
 
     # Добавляем дополнительные аргументы из командной строки
     if len(sys.argv) > 1:
