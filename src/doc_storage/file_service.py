@@ -3,11 +3,17 @@
 """
 import os
 import mimetypes
-import chardet
 import tempfile
 import re
 from typing import Optional, Tuple
 from pathlib import Path
+
+try:
+    import chardet
+    CHARDET_AVAILABLE = True
+except ImportError:
+    chardet = None
+    CHARDET_AVAILABLE = False
 
 try:
     import docx
@@ -125,18 +131,20 @@ class FileTextExtractor:
     def _detect_encoding(cls, file_path: str) -> str:
         """Определение кодировки файла"""
         try:
-            with open(file_path, 'rb') as file:
-                raw_data = file.read(10000)  # Читаем первые 10KB
-                result = chardet.detect(raw_data)
-                encoding = result.get('encoding', 'utf-8')
-                if encoding is None:
-                    encoding = 'utf-8'
-                # Проверяем на популярные кодировки
-                if encoding.lower() in ['windows-1251', 'cp1251']:
-                    return 'windows-1251'
-                return encoding
+            if CHARDET_AVAILABLE:
+                with open(file_path, 'rb') as file:
+                    raw_data = file.read(10000)  # Читаем первые 10KB
+                    result = chardet.detect(raw_data)
+                    encoding = result.get('encoding', 'utf-8')
+                    if encoding is None:
+                        encoding = 'utf-8'
+                    # Проверяем на популярные кодировки
+                    if encoding.lower() in ['windows-1251', 'cp1251']:
+                        return 'windows-1251'
+                    return encoding
         except Exception:
-            return 'utf-8'
+            pass
+        return 'utf-8'
 
     @classmethod
     def _extract_from_text_file(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
@@ -497,5 +505,6 @@ class DocumentFileService:
                 'pdf': PDF_AVAILABLE,
                 'excel': EXCEL_AVAILABLE,
                 'powerpoint': PPTX_AVAILABLE,
+                'chardet': CHARDET_AVAILABLE,
             }
         }

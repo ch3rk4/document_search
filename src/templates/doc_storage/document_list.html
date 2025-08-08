@@ -41,29 +41,33 @@
         </div>
 
         <!-- Быстрые действия -->
-        {% if user.is_authenticated %}
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5><i class="fas fa-plus"></i> Добавить документ</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'doc_storage:document_upload' %}" class="btn btn-success">
-                            <i class="fas fa-upload"></i> Загрузить файл
-                        </a>
-                        <a href="{% url 'doc_storage:document_create' %}" class="btn btn-primary">
-                            <i class="fas fa-edit"></i> Создать вручную
-                        </a>
-                    </div>
-                    <hr>
-                    <small class="text-muted">
-                        <strong>Поддерживаемые форматы файлов:</strong><br>
-                        .txt, .docx, .pdf, .xlsx, .pptx, .csv, .md, .html
-                    </small>
-                </div>
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-plus"></i> Добавить документ</h5>
             </div>
-        {% endif %}
-    </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'doc_storage:document_upload' %}" class="btn btn-success">
+                        <i class="fas fa-upload"></i> Загрузить файл
+                    </a>
+                    <a href="{% url 'doc_storage:document_create' %}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Создать вручную
+                    </a>
+                </div>
+                <hr>
+                <small class="text-muted">
+                    <strong>Поддерживаемые форматы файлов:</strong><br>
+                    .txt, .docx, .pdf, .xlsx, .pptx, .csv, .md, .html
+                </small>
+                {% if not user.is_authenticated %}
+                    <hr>
+                    <small class="text-info">
+                        <i class="fas fa-info-circle"></i> Вы можете загружать документы без регистрации.
+                        <a href="{% url 'admin:login' %}">Войдите</a> для дополнительных возможностей.
+                    </small>
+                {% endif %}
+            </div>
+        </div>
 
     <div class="col-md-9">
         <div class="d-flex justify-content-between align-items-center mb-3">

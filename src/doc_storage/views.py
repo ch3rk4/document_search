@@ -514,7 +514,7 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 # Представления для загрузки файлов
 
-class DocumentUploadView(LoginRequiredMixin, CreateView):
+class DocumentUploadView(CreateView):
     """Представление для загрузки документа из файла"""
     template_name = 'doc_storage/document_upload.html'
     form_class = DocumentUploadForm
@@ -527,13 +527,28 @@ class DocumentUploadView(LoginRequiredMixin, CreateView):
         category = form.cleaned_data['category']
         tags = form.cleaned_data['tags']
 
+        # Получаем автора - если пользователь не авторизован, используем анонимного
+        if self.request.user.is_authenticated:
+            author = self.request.user
+        else:
+            # Создаем анонимного пользователя или используем существующего
+            from django.contrib.auth.models import User
+            author, created = User.objects.get_or_create(
+                username='anonymous',
+                defaults={
+                    'email': 'anonymous@example.com',
+                    'first_name': 'Анонимный',
+                    'last_name': 'Пользователь'
+                }
+            )
+
         # Создаем документ из файла
         file_service = DocumentFileService()
         document, error = file_service.create_document_from_file(
             uploaded_file=uploaded_file,
             title=title,
             category=category,
-            author=self.request.user
+            author=author
         )
 
         if error:
@@ -563,7 +578,7 @@ class DocumentUploadView(LoginRequiredMixin, CreateView):
         return context
 
 
-class DocumentCreateView(LoginRequiredMixin, CreateView):
+class DocumentCreateView(CreateView):
     """Представление для создания документа вручную"""
     model = Document
     template_name = 'doc_storage/document_create.html'
@@ -571,7 +586,22 @@ class DocumentCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         """Обработка валидной формы создания документа"""
-        form.instance.author = self.request.user
+        # Получаем автора - если пользователь не авторизован, используем анонимного
+        if self.request.user.is_authenticated:
+            form.instance.author = self.request.user
+        else:
+            # Создаем анонимного пользователя или используем существующего
+            from django.contrib.auth.models import User
+            author, created = User.objects.get_or_create(
+                username='anonymous',
+                defaults={
+                    'email': 'anonymous@example.com',
+                    'first_name': 'Анонимный',
+                    'last_name': 'Пользователь'
+                }
+            )
+            form.instance.author = author
+
         response = super().form_valid(form)
 
         # Добавляем теги к документу
@@ -671,7 +701,6 @@ class DocumentReplaceFileView(LoginRequiredMixin, UpdateView):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
 def upload_document_file_api(request: HttpRequest) -> Response:
     """API функция для загрузки документа из файла"""
     try:
@@ -694,13 +723,28 @@ def upload_document_file_api(request: HttpRequest) -> Response:
                     'error': 'Указанная категория не существует'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Получаем автора
+        if request.user.is_authenticated:
+            author = request.user
+        else:
+            # Создаем анонимного пользователя или используем существующего
+            from django.contrib.auth.models import User
+            author, created = User.objects.get_or_create(
+                username='anonymous',
+                defaults={
+                    'email': 'anonymous@example.com',
+                    'first_name': 'Анонимный',
+                    'last_name': 'Пользователь'
+                }
+            )
+
         # Создаем документ из файла
         file_service = DocumentFileService()
         document, error = file_service.create_document_from_file(
             uploaded_file=uploaded_file,
             title=title,
             category=category,
-            author=request.user
+            author=author
         )
 
         if error:
