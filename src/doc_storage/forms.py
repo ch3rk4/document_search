@@ -1,8 +1,10 @@
+from pathlib import Path
+
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import Document, DocumentCategory, DocumentTag
+
 from .file_service import FileTextExtractor
-from pathlib import Path
+from .models import Document, DocumentCategory, DocumentTag
 
 
 class DocumentUploadForm(forms.Form):
@@ -11,10 +13,9 @@ class DocumentUploadForm(forms.Form):
     file = forms.FileField(
         label="Выберите файл",
         help_text="Поддерживаемые форматы: .txt, .docx, .pdf, .xlsx, .pptx, .csv, .md, .html",
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.txt,.docx,.pdf,.xlsx,.pptx,.csv,.md,.html,.htm,.xml'
-        })
+        widget=forms.FileInput(
+            attrs={"class": "form-control", "accept": ".txt,.docx,.pdf,.xlsx,.pptx,.csv,.md,.html,.htm,.xml"}
+        ),
     )
 
     title = forms.CharField(
@@ -22,10 +23,7 @@ class DocumentUploadForm(forms.Form):
         max_length=255,
         required=False,
         help_text="Если не указан, будет использовано имя файла",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Введите заголовок или оставьте пустым'
-        })
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Введите заголовок или оставьте пустым"}),
     )
 
     category = forms.ModelChoiceField(
@@ -33,19 +31,19 @@ class DocumentUploadForm(forms.Form):
         queryset=DocumentCategory.objects.all(),
         required=False,
         empty_label="Выберите категорию",
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={"class": "form-select"}),
     )
 
     tags = forms.ModelMultipleChoiceField(
         label="Теги",
         queryset=DocumentTag.objects.all(),
         required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
     )
 
     def clean_file(self):
         """Валидация загружаемого файла"""
-        file = self.cleaned_data.get('file')
+        file = self.cleaned_data.get("file")
 
         if not file:
             return file
@@ -59,17 +57,16 @@ class DocumentUploadForm(forms.Form):
         # Проверяем тип файла
         file_extension = Path(file.name).suffix.lower()
         if not FileTextExtractor.is_supported_file(file.name):
-            supported_extensions = ', '.join(sorted(FileTextExtractor.SUPPORTED_EXTENSIONS))
+            supported_extensions = ", ".join(sorted(FileTextExtractor.SUPPORTED_EXTENSIONS))
             raise ValidationError(
-                f"Неподдерживаемый тип файла: {file_extension}. "
-                f"Поддерживаемые форматы: {supported_extensions}"
+                f"Неподдерживаемый тип файла: {file_extension}. " f"Поддерживаемые форматы: {supported_extensions}"
             )
 
         return file
 
     def clean_title(self):
         """Валидация заголовка"""
-        title = self.cleaned_data.get('title', '').strip()
+        title = self.cleaned_data.get("title", "").strip()
 
         # Если заголовок не указан, будем использовать имя файла
         if not title:
@@ -87,25 +84,20 @@ class DocumentEditForm(forms.ModelForm):
 
     class Meta:
         model = Document
-        fields = ['title', 'content', 'category', 'is_active']
+        fields = ["title", "content", "category", "is_active"]
         widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Введите заголовок документа'
-            }),
-            'content': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 15,
-                'placeholder': 'Введите содержимое документа...'
-            }),
-            'category': forms.Select(attrs={'class': 'form-select'}),
-            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Введите заголовок документа"}),
+            "content": forms.Textarea(
+                attrs={"class": "form-control", "rows": 15, "placeholder": "Введите содержимое документа..."}
+            ),
+            "category": forms.Select(attrs={"class": "form-select"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].empty_label = "Выберите категорию"
-        self.fields['category'].queryset = DocumentCategory.objects.all()
+        self.fields["category"].empty_label = "Выберите категорию"
+        self.fields["category"].queryset = DocumentCategory.objects.all()
 
 
 class DocumentCreateForm(forms.ModelForm):
@@ -115,33 +107,28 @@ class DocumentCreateForm(forms.ModelForm):
         label="Теги",
         queryset=DocumentTag.objects.all(),
         required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxSelectMultiple(attrs={"class": "form-check-input"}),
     )
 
     class Meta:
         model = Document
-        fields = ['title', 'content', 'category']
+        fields = ["title", "content", "category"]
         widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Введите заголовок документа'
-            }),
-            'content': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 15,
-                'placeholder': 'Введите содержимое документа...'
-            }),
-            'category': forms.Select(attrs={'class': 'form-select'}),
+            "title": forms.TextInput(attrs={"class": "form-control", "placeholder": "Введите заголовок документа"}),
+            "content": forms.Textarea(
+                attrs={"class": "form-control", "rows": 15, "placeholder": "Введите содержимое документа..."}
+            ),
+            "category": forms.Select(attrs={"class": "form-select"}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['category'].empty_label = "Выберите категорию"
-        self.fields['category'].queryset = DocumentCategory.objects.all()
+        self.fields["category"].empty_label = "Выберите категорию"
+        self.fields["category"].queryset = DocumentCategory.objects.all()
 
     def clean_title(self):
         """Валидация заголовка на уникальность"""
-        title = self.cleaned_data.get('title', '').strip()
+        title = self.cleaned_data.get("title", "").strip()
 
         if Document.objects.filter(title=title, is_active=True).exists():
             raise ValidationError("Документ с таким заголовком уже существует")
@@ -155,22 +142,21 @@ class FileReplaceForm(forms.Form):
     file = forms.FileField(
         label="Новый файл",
         help_text="Текст из нового файла заменит содержимое документа",
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': '.txt,.docx,.pdf,.xlsx,.pptx,.csv,.md,.html,.htm,.xml'
-        })
+        widget=forms.FileInput(
+            attrs={"class": "form-control", "accept": ".txt,.docx,.pdf,.xlsx,.pptx,.csv,.md,.html,.htm,.xml"}
+        ),
     )
 
     keep_title = forms.BooleanField(
         label="Сохранить текущий заголовок",
         required=False,
         initial=True,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
 
     def clean_file(self):
         """Валидация загружаемого файла"""
-        file = self.cleaned_data.get('file')
+        file = self.cleaned_data.get("file")
 
         if not file:
             return file
@@ -184,10 +170,9 @@ class FileReplaceForm(forms.Form):
         # Проверяем тип файла
         file_extension = Path(file.name).suffix.lower()
         if not FileTextExtractor.is_supported_file(file.name):
-            supported_extensions = ', '.join(sorted(FileTextExtractor.SUPPORTED_EXTENSIONS))
+            supported_extensions = ", ".join(sorted(FileTextExtractor.SUPPORTED_EXTENSIONS))
             raise ValidationError(
-                f"Неподдерживаемый тип файла: {file_extension}. "
-                f"Поддерживаемые форматы: {supported_extensions}"
+                f"Неподдерживаемый тип файла: {file_extension}. " f"Поддерживаемые форматы: {supported_extensions}"
             )
 
         return file

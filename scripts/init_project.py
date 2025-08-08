@@ -3,8 +3,8 @@
 Скрипт для инициализации проекта поисковика документов
 """
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -28,10 +28,10 @@ def check_dependencies():
     print("🔍 Проверяем зависимости...")
 
     dependencies = {
-        'python': 'python --version',
-        'pip': 'pip --version',
-        'docker': 'docker --version',
-        'docker-compose': 'docker-compose --version'
+        "python": "python --version",
+        "pip": "pip --version",
+        "docker": "docker --version",
+        "docker-compose": "docker-compose --version",
     }
 
     for name, command in dependencies.items():
@@ -60,18 +60,19 @@ def init_project():
         return False
 
     # Создаем необходимые директории
-    directories = ['logs', 'media', 'src/staticfiles']
+    directories = ["logs", "media", "src/staticfiles"]
     for directory in directories:
         dir_path = project_root / directory
         dir_path.mkdir(parents=True, exist_ok=True)
         print(f"📁 Создана директория: {directory}")
 
     # Копируем .env.example в .env если .env не существует
-    env_example = project_root / '.env.example'
-    env_file = project_root / '.env'
+    env_example = project_root / ".env.example"
+    env_file = project_root / ".env"
 
     if env_example.exists() and not env_file.exists():
         import shutil
+
         shutil.copy(env_example, env_file)
         print("📄 Создан файл .env из .env.example")
 
@@ -100,6 +101,6 @@ def init_project():
         return False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     success = init_project()
     sys.exit(0 if success else 1)
