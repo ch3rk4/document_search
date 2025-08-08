@@ -4,21 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create README.md">
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="coverage">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pytest.ini" beforeDir="false" afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/load_test_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/load_test_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/file_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/serializers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/search_service/algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/algorithms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_file_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/run_tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/run_tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/document_search/test_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/test_settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,8 +20,8 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Dockerfile" />
-        <option value="Python Script" />
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -76,8 +67,9 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
-      <recent name="C:\Users\petys\PycharmProjects\document_search" />
+      <recent name="C:\Users\petys\PycharmProjects\document_search\tests" />
       <recent name="C:\Users\petys\PycharmProjects\document_search\src" />
+      <recent name="C:\Users\petys\PycharmProjects\document_search" />
     </key>
   </component>
   <component name="RunManager" selected="Python tests.Python tests for test_models.DocumentModelTest.test_document_update_word_count">
@@ -406,7 +398,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754676339633</updated>
     </task>
-    <option name="localTasksCounter" value="30" />
+    <task id="LOCAL-00030" summary="fixes">
+      <option name="closed" value="true" />
+      <created>1754686711176</created>
+      <option name="number" value="00030" />
+      <option name="presentableId" value="LOCAL-00030" />
+      <option name="project" value="LOCAL" />
+      <updated>1754686711179</updated>
+    </task>
+    <task id="LOCAL-00031" summary="coverage">
+      <option name="closed" value="true" />
+      <created>1754686745962</created>
+      <option name="number" value="00031" />
+      <option name="presentableId" value="LOCAL-00031" />
+      <option name="project" value="LOCAL" />
+      <updated>1754686745962</updated>
+    </task>
+    <option name="localTasksCounter" value="32" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -427,12 +435,13 @@
     <MESSAGE value="configurate docker" />
     <MESSAGE value="rework" />
     <MESSAGE value="new migrate" />
-    <MESSAGE value="fixes" />
     <MESSAGE value="new funcs" />
     <MESSAGE value="use black and isort" />
     <MESSAGE value="fix for flake8" />
     <MESSAGE value="fix for mypy" />
     <MESSAGE value="create README.md" />
-    <option name="LAST_COMMIT_MESSAGE" value="create README.md" />
+    <MESSAGE value="fixes" />
+    <MESSAGE value="coverage" />
+    <option name="LAST_COMMIT_MESSAGE" value="coverage" />
   </component>
 </project>
