@@ -9,6 +9,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg
 from django.contrib import messages
 from django.urls import reverse_lazy, reverse
+from django.views import View
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -514,111 +515,136 @@ class SearchHistoryViewSet(viewsets.ReadOnlyModelViewSet):
 
 # Представления для загрузки файлов
 
-class DocumentUploadView(CreateView):
+class DocumentUploadView(View):
     """Представление для загрузки документа из файла"""
     template_name = 'doc_storage/document_upload.html'
-    form_class = DocumentUploadForm
-    success_url = reverse_lazy('doc_storage:document_list')
 
-    def form_valid(self, form):
-        """Обработка валидной формы загрузки файла"""
-        uploaded_file = form.cleaned_data['file']
-        title = form.cleaned_data['title']
-        category = form.cleaned_data['category']
-        tags = form.cleaned_data['tags']
+    def get(self, request):
+        """Отображение формы загрузки"""
+        form = DocumentUploadForm()
+        context = {
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
 
-        # Получаем автора - если пользователь не авторизован, используем анонимного
-        if self.request.user.is_authenticated:
-            author = self.request.user
-        else:
-            # Создаем анонимного пользователя или используем существующего
-            from django.contrib.auth.models import User
-            author, created = User.objects.get_or_create(
-                username='anonymous',
-                defaults={
-                    'email': 'anonymous@example.com',
-                    'first_name': 'Анонимный',
-                    'last_name': 'Пользователь'
+    def post(self, request):
+        """Обработка загрузки файла"""
+        form = DocumentUploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            uploaded_file = form.cleaned_data['file']
+            title = form.cleaned_data['title']
+            category = form.cleaned_data['category']
+            tags = form.cleaned_data['tags']
+
+            # Получаем автора - если пользователь не авторизован, используем анонимного
+            if request.user.is_authenticated:
+                author = request.user
+            else:
+                # Создаем анонимного пользователя или используем существующего
+                from django.contrib.auth.models import User
+                author, created = User.objects.get_or_create(
+                    username='anonymous',
+                    defaults={
+                        'email': 'anonymous@example.com',
+                        'first_name': 'Анонимный',
+                        'last_name': 'Пользователь'
+                    }
+                )
+
+            # Создаем документ из файла
+            file_service = DocumentFileService()
+            document, error = file_service.create_document_from_file(
+                uploaded_file=uploaded_file,
+                title=title,
+                category=category,
+                author=author
+            )
+
+            if error:
+                messages.error(request, f"Ошибка загрузки файла: {error}")
+                context = {
+                    'form': form,
+                    'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+                    'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
                 }
+                return render(request, self.template_name, context)
+
+            # Добавляем теги к документу
+            for tag in tags:
+                DocumentTagRelation.objects.get_or_create(
+                    document=document,
+                    tag=tag
+                )
+
+            messages.success(
+                request,
+                f'Документ "{document.title}" успешно создан из файла "{uploaded_file.name}"'
             )
 
-        # Создаем документ из файла
-        file_service = DocumentFileService()
-        document, error = file_service.create_document_from_file(
-            uploaded_file=uploaded_file,
-            title=title,
-            category=category,
-            author=author
-        )
+            # Перенаправляем на страницу созданного документа
+            return redirect('doc_storage:document_detail', pk=document.pk)
 
-        if error:
-            messages.error(self.request, f"Ошибка загрузки файла: {error}")
-            return self.form_invalid(form)
-
-        # Добавляем теги к документу
-        for tag in tags:
-            DocumentTagRelation.objects.get_or_create(
-                document=document,
-                tag=tag
-            )
-
-        messages.success(
-            self.request,
-            f'Документ "{document.title}" успешно создан из файла "{uploaded_file.name}"'
-        )
-
-        # Перенаправляем на страницу созданного документа
-        return redirect('doc_storage:document_detail', pk=document.pk)
-
-    def get_context_data(self, **kwargs):
-        """Добавление контекста"""
-        context = super().get_context_data(**kwargs)
-        context['supported_formats'] = sorted(FileTextExtractor.SUPPORTED_EXTENSIONS)
-        context['max_file_size_mb'] = FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
-        return context
+        # Если форма невалидна, показываем ошибки
+        context = {
+            'form': form,
+            'supported_formats': sorted(FileTextExtractor.SUPPORTED_EXTENSIONS),
+            'max_file_size_mb': FileTextExtractor.MAX_FILE_SIZE // (1024 * 1024)
+        }
+        return render(request, self.template_name, context)
 
 
-class DocumentCreateView(CreateView):
+class DocumentCreateView(View):
     """Представление для создания документа вручную"""
-    model = Document
     template_name = 'doc_storage/document_create.html'
-    form_class = DocumentCreateForm
 
-    def form_valid(self, form):
-        """Обработка валидной формы создания документа"""
-        # Получаем автора - если пользователь не авторизован, используем анонимного
-        if self.request.user.is_authenticated:
-            form.instance.author = self.request.user
-        else:
-            # Создаем анонимного пользователя или используем существующего
-            from django.contrib.auth.models import User
-            author, created = User.objects.get_or_create(
-                username='anonymous',
-                defaults={
-                    'email': 'anonymous@example.com',
-                    'first_name': 'Анонимный',
-                    'last_name': 'Пользователь'
-                }
+    def get(self, request):
+        """Отображение формы создания"""
+        form = DocumentCreateForm()
+        return render(request, self.template_name, {'form': form})
+
+    def post(self, request):
+        """Обработка создания документа"""
+        form = DocumentCreateForm(request.POST)
+
+        if form.is_valid():
+            # Получаем автора - если пользователь не авторизован, используем анонимного
+            if request.user.is_authenticated:
+                author = request.user
+            else:
+                # Создаем анонимного пользователя или используем существующего
+                from django.contrib.auth.models import User
+                author, created = User.objects.get_or_create(
+                    username='anonymous',
+                    defaults={
+                        'email': 'anonymous@example.com',
+                        'first_name': 'Анонимный',
+                        'last_name': 'Пользователь'
+                    }
+                )
+
+            # Создаем документ
+            document = Document.objects.create(
+                title=form.cleaned_data['title'],
+                content=form.cleaned_data['content'],
+                category=form.cleaned_data['category'],
+                author=author
             )
-            form.instance.author = author
 
-        response = super().form_valid(form)
+            # Добавляем теги к документу
+            tags = form.cleaned_data.get('tags', [])
+            for tag in tags:
+                DocumentTagRelation.objects.get_or_create(
+                    document=document,
+                    tag=tag
+                )
 
-        # Добавляем теги к документу
-        tags = form.cleaned_data.get('tags', [])
-        for tag in tags:
-            DocumentTagRelation.objects.get_or_create(
-                document=self.object,
-                tag=tag
-            )
+            messages.success(request, f'Документ "{document.title}" успешно создан')
+            return redirect('doc_storage:document_detail', pk=document.pk)
 
-        messages.success(self.request, f'Документ "{self.object.title}" успешно создан')
-        return response
-
-    def get_success_url(self):
-        """URL для перенаправления после успешного создания"""
-        return reverse('doc_storage:document_detail', kwargs={'pk': self.object.pk})
-
+        return render(request, self.template_name, {'form': form})
 
 class DocumentEditView(LoginRequiredMixin, UpdateView):
     """Представление для редактирования документа"""
