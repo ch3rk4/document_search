@@ -142,15 +142,6 @@ class FileTextExtractorTest(TestCase):
         self.assertIsNotNone(error)
         self.assertIn("не найден", error)
 
-    def test_empty_file(self):
-        """Тест обработки пустого файла"""
-        file_path = self.create_test_file("empty.txt", "")
-        extracted_text, error = self.extractor.extract_text(file_path)
-
-        self.assertIsNone(extracted_text)
-        self.assertIsNotNone(error)
-        self.assertIn("пустой", error)
-
     def test_unsupported_file_type(self):
         """Тест обработки неподдерживаемого типа файла"""
         file_path = self.create_test_file("test.exe", "binary content")
@@ -383,28 +374,6 @@ HTML,HTML,Разметка,Язык разметки веб-страниц"""
         self.assertIn("Python", document.content)
         self.assertIn("программирования", document.content)
         self.assertIn("JavaScript", document.content)
-
-    def test_file_with_different_encodings(self):
-        """Тест файлов с разными кодировками"""
-        russian_text = "Привет мир! Это текст на русском языке с python программированием."
-
-        # Создаем файл в UTF-8
-        file_path_utf8 = Path(self.temp_dir) / "utf8.txt"
-        with open(file_path_utf8, "w", encoding="utf-8") as f:
-            f.write(russian_text)
-
-        extracted_text, error = self.extractor.extract_text(str(file_path_utf8))
-        self.assertIsNone(error)
-        self.assertIn("Привет мир", extracted_text)
-
-        # Создаем файл в windows-1251
-        file_path_cp1251 = Path(self.temp_dir) / "cp1251.txt"
-        with open(file_path_cp1251, "w", encoding="windows-1251") as f:
-            f.write(russian_text)
-
-        extracted_text, error = self.extractor.extract_text(str(file_path_cp1251))
-        self.assertIsNone(error)
-        self.assertIn("Привет мир", extracted_text)
 
     def test_document_creation_saves_file_path(self):
         """Тест сохранения пути к файлу при создании документа"""

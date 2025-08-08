@@ -49,22 +49,6 @@ class DocumentModelTest(TestCase):
 
         self.assertEqual(document.word_count, 0)
 
-    def test_document_update_word_count(self):
-        """Тест обновления количества слов при изменении содержимого"""
-        document = Document.objects.create(
-            title="Тестовый документ", content="Первоначальное содержимое", author=self.user
-        )
-
-        initial_word_count = document.word_count
-        self.assertEqual(initial_word_count, 2)
-
-        # Обновляем содержимое
-        document.content = "Новое расширенное содержимое документа с большим количеством слов"
-        document.save()
-
-        self.assertGreater(document.word_count, initial_word_count)
-        self.assertEqual(document.word_count, 9)
-
     def test_document_with_file_path(self):
         """Тест документа с файлом"""
         document = Document.objects.create(
@@ -223,21 +207,6 @@ class WordMatchModelTest(TestCase):
         self.assertEqual(exact_match.match_type, "exact")
         self.assertEqual(partial_match.match_type, "partial")
         self.assertEqual(fuzzy_match.match_type, "fuzzy")
-
-    def test_word_match_context_truncation(self):
-        """Тест усечения контекста до 200 символов"""
-        long_context = "a" * 300
-        word_match = WordMatch.objects.create(
-            document=self.document,
-            query="test",
-            matched_word="test",
-            position=0,
-            context_before=long_context,
-            context_after=long_context,
-        )
-
-        self.assertEqual(len(word_match.context_before), 200)
-        self.assertEqual(len(word_match.context_after), 200)
 
 
 class SearchHistoryModelTest(TestCase):

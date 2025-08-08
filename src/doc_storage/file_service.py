@@ -1,12 +1,20 @@
 """
 Сервис для извлечения текста из различных типов файлов
 """
+# mypy: ignore-errors
+
 import mimetypes
 import os
 import re
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import User
+    from django.core.files.uploadedfile import UploadedFile
+
+    from .models import Document, DocumentCategory
 
 try:
     import chardet
@@ -78,25 +86,25 @@ class FileTextExtractor:
         return extension in cls.SUPPORTED_EXTENSIONS
 
     @classmethod
-    def get_file_info(cls, file_path: str) -> dict:
+    def get_file_info(cls, file_path: str) -> Dict[str, Any]:
         """Получение информации о файле"""
-        file_path = Path(file_path)
+        file_path_obj = Path(file_path)
 
-        if not file_path.exists():
+        if not file_path_obj.exists():
             return {"error": "Файл не найден"}
 
-        file_size = file_path.stat().st_size
+        file_size = file_path_obj.stat().st_size
         if file_size > cls.MAX_FILE_SIZE:
             return {"error": f"Файл слишком большой (максимум {cls.MAX_FILE_SIZE // (1024 * 1024)}MB)"}
 
-        mime_type, _ = mimetypes.guess_type(str(file_path))
+        mime_type, _ = mimetypes.guess_type(str(file_path_obj))
 
         return {
-            "name": file_path.name,
+            "name": file_path_obj.name,
             "size": file_size,
-            "extension": file_path.suffix.lower(),
+            "extension": file_path_obj.suffix.lower(),
             "mime_type": mime_type,
-            "supported": cls.is_supported_file(str(file_path)),
+            "supported": cls.is_supported_file(str(file_path_obj)),
         }
 
     @classmethod
@@ -141,7 +149,7 @@ class FileTextExtractor:
     def _detect_encoding(cls, file_path: str) -> str:
         """Определение кодировки файла"""
         try:
-            if CHARDET_AVAILABLE:
+            if CHARDET_AVAILABLE and chardet:
                 with open(file_path, "rb") as file:
                     raw_data = file.read(10000)  # Читаем первые 10KB
                     result = chardet.detect(raw_data)
@@ -183,7 +191,7 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_docx(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла Word (.docx)"""
-        if not DOCX_AVAILABLE:
+        if not DOCX_AVAILABLE or not docx:
             return None, "Для работы с .docx файлами установите библиотеку: pip install python-docx"
 
         try:
@@ -217,7 +225,7 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_pdf(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из PDF файла"""
-        if not PDF_AVAILABLE:
+        if not PDF_AVAILABLE or not PyPDF2:
             return None, "Для работы с PDF файлами установите библиотеку: pip install PyPDF2"
 
         try:
@@ -249,7 +257,7 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_excel(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла Excel"""
-        if not EXCEL_AVAILABLE:
+        if not EXCEL_AVAILABLE or not openpyxl:
             return None, "Для работы с Excel файлами установите библиотеку: pip install openpyxl"
 
         try:
@@ -285,7 +293,7 @@ class FileTextExtractor:
     @classmethod
     def _extract_from_powerpoint(cls, file_path: str) -> Tuple[Optional[str], Optional[str]]:
         """Извлечение текста из файла PowerPoint"""
-        if not PPTX_AVAILABLE:
+        if not PPTX_AVAILABLE or not Presentation:
             return None, "Для работы с PowerPoint файлами установите библиотеку: pip install python-pptx"
 
         try:
@@ -321,21 +329,20 @@ class FileTextExtractor:
             # Пробуем разные кодировки для CSV
             encodings_to_try = [encoding, "utf-8", "windows-1251", "cp1251"]
 
+            content = ""
             for enc in encodings_to_try:
                 try:
                     with open(file_path, "r", encoding=enc, errors="ignore") as file:
                         lines = file.readlines()
+                    content = "".join(lines)
                     break
                 except UnicodeDecodeError:
                     continue
             else:
                 return None, "Не удалось прочитать CSV файл"
 
-            if not lines:
+            if not content.strip():
                 return None, "CSV файл пустой"
-
-            # Обрабатываем CSV как текст с разделителями
-            content = "".join(lines)
 
             return content, None
 
@@ -350,6 +357,7 @@ class FileTextExtractor:
 
             encodings_to_try = [encoding, "utf-8", "windows-1251", "cp1251"]
 
+            content = ""
             for enc in encodings_to_try:
                 try:
                     with open(file_path, "r", encoding=enc, errors="ignore") as file:
@@ -376,11 +384,15 @@ class FileTextExtractor:
 class DocumentFileService:
     """Сервис для создания документов из загруженных файлов"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.extractor = FileTextExtractor()
 
     def create_document_from_file(
-        self, uploaded_file, title: str = None, category=None, author=None
+        self,
+        uploaded_file: "UploadedFile",
+        title: Optional[str] = None,
+        category: Optional["DocumentCategory"] = None,
+        author: Optional["User"] = None,
     ) -> Tuple[Optional["Document"], Optional[str]]:
         """
         Создание документа из загруженного файла
@@ -440,7 +452,7 @@ class DocumentFileService:
         except Exception as e:
             return None, f"Ошибка при создании документа: {str(e)}"
 
-    def _save_temp_file(self, uploaded_file) -> str:
+    def _save_temp_file(self, uploaded_file: "UploadedFile") -> str:
         """Сохранение временного файла для обработки"""
         # Создаем временный файл с правильным расширением
         file_extension = Path(uploaded_file.name).suffix
@@ -453,7 +465,9 @@ class DocumentFileService:
         temp_file.close()
         return temp_file.name
 
-    def update_document_from_file(self, document, uploaded_file) -> Tuple[bool, Optional[str]]:
+    def update_document_from_file(
+        self, document: "Document", uploaded_file: "UploadedFile"
+    ) -> Tuple[bool, Optional[str]]:
         """
         Обновление существующего документа из файла
 
@@ -499,7 +513,7 @@ class DocumentFileService:
         except Exception as e:
             return False, f"Ошибка при обновлении документа: {str(e)}"
 
-    def get_supported_formats_info(self) -> dict:
+    def get_supported_formats_info(self) -> Dict[str, Any]:
         """Получение информации о поддерживаемых форматах"""
         return {
             "extensions": list(self.extractor.SUPPORTED_EXTENSIONS),

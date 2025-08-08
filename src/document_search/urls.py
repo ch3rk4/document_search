@@ -1,9 +1,13 @@
+from typing import List, Union
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import URLPattern, URLResolver, include, path
 
-urlpatterns = [
+URLPatternList = List[Union[URLPattern, URLResolver]]
+
+urlpatterns: URLPatternList = [
     path("admin/", admin.site.urls),
     path("", include("doc_storage.urls")),
     path("api-auth/", include("rest_framework.urls")),
@@ -11,5 +15,7 @@ urlpatterns = [
 
 # Добавление маршрутов для медиа файлов в режиме отладки
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    media_patterns = static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    static_patterns = static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns.extend(media_patterns)
+    urlpatterns.extend(static_patterns)

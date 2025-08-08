@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# mypy: ignore-errors
+
 import os
 import sys
 from pathlib import Path

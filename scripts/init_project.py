@@ -6,9 +6,10 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Dict
 
 
-def run_command(command, description):
+def run_command(command: str, description: str) -> bool:
     """Запуск команды с описанием"""
     print(f"\n📋 {description}")
     print(f"💻 Выполняем: {command}")
@@ -23,11 +24,11 @@ def run_command(command, description):
         return False
 
 
-def check_dependencies():
+def check_dependencies() -> bool:
     """Проверка зависимостей"""
     print("🔍 Проверяем зависимости...")
 
-    dependencies = {
+    dependencies: Dict[str, str] = {
         "python": "python --version",
         "pip": "pip --version",
         "docker": "docker --version",
@@ -44,7 +45,7 @@ def check_dependencies():
     return True
 
 
-def init_project():
+def init_project() -> bool:
     """Инициализация проекта"""
     print("🚀 Инициализация проекта поисковика документов")
     print("=" * 50)
