@@ -32,20 +32,27 @@
                 <i class="fas fa-search"></i> Поисковик документов
             </a>
             <div class="navbar-nav ms-auto">
+                <!-- Доступно всем пользователям -->
+                <a class="nav-link" href="{% url 'doc_storage:document_upload' %}">
+                    <i class="fas fa-upload"></i> Загрузить файл
+                </a>
+                <a class="nav-link" href="{% url 'doc_storage:document_create' %}">
+                    <i class="fas fa-plus"></i> Создать документ
+                </a>
+
                 {% if user.is_authenticated %}
-                    <a class="nav-link" href="{% url 'doc_storage:document_upload' %}">
-                        <i class="fas fa-upload"></i> Загрузить файл
-                    </a>
-                    <a class="nav-link" href="{% url 'doc_storage:document_create' %}">
-                        <i class="fas fa-plus"></i> Создать документ
-                    </a>
                     <a class="nav-link" href="{% url 'doc_storage:search_history' %}">
                         <i class="fas fa-history"></i> История поиска
                     </a>
-                    <a class="nav-link" href="{% url 'admin:index' %}">
-                        <i class="fas fa-cog"></i> Админ-панель
-                    </a>
+                    {% if user.is_staff %}
+                        <a class="nav-link" href="{% url 'admin:index' %}">
+                            <i class="fas fa-cog"></i> Админ-панель
+                        </a>
+                    {% endif %}
                     <span class="nav-link">Привет, {{ user.username }}!</span>
+                    <a class="nav-link" href="{% url 'admin:logout' %}">
+                        <i class="fas fa-sign-out-alt"></i> Выйти
+                    </a>
                 {% else %}
                     <a class="nav-link" href="{% url 'admin:login' %}">
                         <i class="fas fa-sign-in-alt"></i> Войти
@@ -56,13 +63,22 @@
     </nav>
 
     <main class="container mt-4">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
         {% block content %}{% endblock %}
     </main>
 
     <footer class="bg-light mt-5 py-3">
         <div class="container text-center">
             <small class="text-muted">
-                © 2025 Поисковик документов. Разработано с использованием Django REST Framework.
+                © 2025 Поисковик документов. Система поиска слов в документах с алгоритмической оптимизацией.
             </small>
         </div>
     </footer>
