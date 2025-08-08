@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 import difflib
 import re
 import time

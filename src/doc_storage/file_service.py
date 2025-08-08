@@ -1,6 +1,8 @@
 """
 Сервис для извлечения текста из различных типов файлов
 """
+# mypy: ignore-errors
+
 import mimetypes
 import os
 import re

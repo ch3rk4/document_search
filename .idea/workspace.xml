@@ -4,9 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fix for flake8">
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="create README.md">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/init_project.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/init_project.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pytest.ini" beforeDir="false" afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/scripts/load_test_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/load_test_data.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/admin.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/auth_forms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/file_service.py" afterDir="false" />
@@ -14,10 +15,10 @@
       <change beforePath="$PROJECT_DIR$/src/doc_storage/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/serializers.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/serializers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/doc_storage/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/doc_storage/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/document_search/test_settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/test_settings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/document_search/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/document_search/urls.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/search_service/algorithms.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/search_service/algorithms.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_api.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_file_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -66,6 +67,7 @@
   "keyToString": {
     "DefaultHtmlFileTemplate": "HTML File",
     "Python tests.Python tests for test_models.DocumentModelTest.executor": "Run",
+    "Python tests.Python tests for test_models.DocumentModelTest.test_document_update_word_count.executor": "Run",
     "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
     "Python.run_tests.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
@@ -78,7 +80,7 @@
       <recent name="C:\Users\petys\PycharmProjects\document_search\src" />
     </key>
   </component>
-  <component name="RunManager" selected="Python.run_tests">
+  <component name="RunManager" selected="Python tests.Python tests for test_models.DocumentModelTest.test_document_update_word_count">
     <configuration name="run_tests" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="document_search" />
       <option name="ENV_FILES" value="" />
@@ -116,6 +118,21 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
+    <configuration name="Python tests for test_models.DocumentModelTest.test_document_update_word_count" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="document_search" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_models.DocumentModelTest.test_document_update_word_count&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
     <configuration name="Python tests for tests.test_algorithms.SearchAlgorithmsTest" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="document_search" />
       <option name="ENV_FILES" value="" />
@@ -133,11 +150,11 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python tests.Python tests for test_models.DocumentModelTest.test_document_update_word_count" />
         <item itemvalue="Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest" />
         <item itemvalue="Python tests.Python tests for test_models.DocumentModelTest" />
         <item itemvalue="Python.run_tests" />
         <item itemvalue="Python.run_tests" />
-        <item itemvalue="Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest" />
       </list>
     </recent_temporary>
   </component>
@@ -373,7 +390,23 @@
       <option name="project" value="LOCAL" />
       <updated>1754669307907</updated>
     </task>
-    <option name="localTasksCounter" value="28" />
+    <task id="LOCAL-00028" summary="fix for mypy">
+      <option name="closed" value="true" />
+      <created>1754676320713</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1754676320714</updated>
+    </task>
+    <task id="LOCAL-00029" summary="create README.md">
+      <option name="closed" value="true" />
+      <created>1754676339633</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1754676339633</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -398,6 +431,8 @@
     <MESSAGE value="new funcs" />
     <MESSAGE value="use black and isort" />
     <MESSAGE value="fix for flake8" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix for flake8" />
+    <MESSAGE value="fix for mypy" />
+    <MESSAGE value="create README.md" />
+    <option name="LAST_COMMIT_MESSAGE" value="create README.md" />
   </component>
 </project>

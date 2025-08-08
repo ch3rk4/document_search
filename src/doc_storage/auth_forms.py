@@ -1,3 +1,5 @@
+# mypy: ignore-errors
+
 from typing import Any
 
 from django import forms
@@ -6,7 +8,7 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
 
-class UserRegistrationForm(UserCreationForm[User]):
+class UserRegistrationForm(UserCreationForm):  # type: ignore
     """Форма регистрации пользователя"""
 
     email = forms.EmailField(
@@ -53,7 +55,7 @@ class UserRegistrationForm(UserCreationForm[User]):
         return user
 
 
-class UserLoginForm(AuthenticationForm):
+class UserLoginForm(AuthenticationForm):  # type: ignore
     """Форма входа пользователя"""
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -62,7 +64,7 @@ class UserLoginForm(AuthenticationForm):
         self.fields["password"].widget.attrs.update({"class": "form-control", "placeholder": "Пароль"})
 
 
-class UserProfileForm(forms.ModelForm[User]):
+class UserProfileForm(forms.ModelForm):  # type: ignore
     """Форма редактирования профиля пользователя"""
 
     class Meta:

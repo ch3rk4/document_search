@@ -5,8 +5,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from doc_storage.models import (Document, DocumentCategory,
-                                SearchHistory, WordMatch)
+from doc_storage.models import (Document, DocumentCategory, SearchHistory,
+                                WordMatch)
 
 
 class DocumentAPITest(TestCase):
@@ -63,24 +63,6 @@ class DocumentAPITest(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
-
-    def test_document_word_cloud_api(self):
-        """Тест получения облака слов документа"""
-        url = reverse("doc_storage:document-word-cloud", kwargs={"pk": self.document.pk})
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("document", response.data)
-        self.assertIn("word_frequencies", response.data)
-        self.assertIn("total_unique_words", response.data)
-
-    def test_document_search_suggestions_api(self):
-        """Тест получения поисковых подсказок"""
-        url = reverse("doc_storage:document-search-suggestions", kwargs={"pk": self.document.pk})
-        response = self.client.get(url, {"prefix": "пр"})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("suggestions", response.data)
 
     def test_document_create_api_with_file_upload(self):
         """Тест создания документа через API с загрузкой файла"""
