@@ -71,17 +71,6 @@ TEMPLATES = [
     },
 ]
 
-# Отключаем миграции для ускорения тестов
-class DisableMigrations:
-    def __contains__(self, item: Any) -> bool:
-        return True
-
-    def __getitem__(self, item: Any) -> None:
-        return None
-
-
-MIGRATION_MODULES = DisableMigrations()
-
 # Простой пароль хашер для тестов
 PASSWORD_HASHERS = [
     "django.contrib.auth.hashers.MD5PasswordHasher",

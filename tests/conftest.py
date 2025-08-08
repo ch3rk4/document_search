@@ -25,9 +25,6 @@ def pytest_configure(config):
     # Устанавливаем переменные окружения
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "document_search.test_settings")
 
-    # НЕ меняем рабочую директорию - оставляем в корне проекта
-    # os.chdir(src_dir)  # Убираем эту строку
-
     # Инициализируем Django
     if not django.conf.settings.configured:
         django.setup()
