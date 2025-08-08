@@ -1,3 +1,4 @@
+import pytest
 from django.contrib.auth.models import User
 from django.test import TestCase
 
@@ -6,6 +7,7 @@ from doc_storage.models import (Document, DocumentCategory, SearchHistory,
 from search_service.algorithms import TextSearchAlgorithms, WordSearchService
 
 
+@pytest.mark.django_db
 class TextSearchAlgorithmsTest(TestCase):
     """Тесты для алгоритмов поиска текста"""
 
@@ -130,6 +132,7 @@ class TextSearchAlgorithmsTest(TestCase):
         self.assertEqual(rk_results, [])
 
 
+@pytest.mark.django_db
 class WordSearchServiceTest(TestCase):
     """Тесты для сервиса поиска слов в документах"""
 
