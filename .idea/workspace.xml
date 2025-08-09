@@ -4,15 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="rewrite tests">
+    <list default="true" id="cc8c3ac9-313b-481b-8c6e-eb8a74c662e8" name="Changes" comment="fix tests and for test">
+      <change beforePath="$PROJECT_DIR$/.coverage" beforeDir="false" afterPath="$PROJECT_DIR$/.coverage" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.coveragerc" beforeDir="false" afterPath="$PROJECT_DIR$/.coveragerc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pytest.ini" beforeDir="false" afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_file_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_file_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_forms.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -31,7 +26,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="not_finally_day" />
+        <entry key="$PROJECT_DIR$" value="continue" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -66,14 +61,14 @@
     "Python tests.Python tests for tests.test_algorithms.SearchAlgorithmsTest.executor": "Run",
     "Python.run_tests.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "continue"
+    "git-widget-placeholder": "not__yet__finally"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\petys\PycharmProjects\document_search" />
       <recent name="C:\Users\petys\PycharmProjects\document_search\tests" />
       <recent name="C:\Users\petys\PycharmProjects\document_search\src" />
-      <recent name="C:\Users\petys\PycharmProjects\document_search" />
     </key>
   </component>
   <component name="RunManager" selected="Python tests.Python tests for tests.test_search_algorithms">
@@ -457,12 +452,26 @@
       <option name="project" value="LOCAL" />
       <updated>1754719077486</updated>
     </task>
-    <option name="localTasksCounter" value="35" />
+    <task id="LOCAL-00035" summary="trying to fix">
+      <option name="closed" value="true" />
+      <created>1754725701209</created>
+      <option name="number" value="00035" />
+      <option name="presentableId" value="LOCAL-00035" />
+      <option name="project" value="LOCAL" />
+      <updated>1754725701211</updated>
+    </task>
+    <task id="LOCAL-00036" summary="fix tests and for test">
+      <option name="closed" value="true" />
+      <created>1754729842907</created>
+      <option name="number" value="00036" />
+      <option name="presentableId" value="LOCAL-00036" />
+      <option name="project" value="LOCAL" />
+      <updated>1754729842909</updated>
+    </task>
+    <option name="localTasksCounter" value="37" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="create gitignore" />
-    <MESSAGE value="create requirements.txt" />
     <MESSAGE value="create django proj" />
     <MESSAGE value="create django apps" />
     <MESSAGE value="create algorithms of search" />
@@ -486,6 +495,8 @@
     <MESSAGE value="coverage" />
     <MESSAGE value="try fixing" />
     <MESSAGE value="rewrite tests" />
-    <option name="LAST_COMMIT_MESSAGE" value="rewrite tests" />
+    <MESSAGE value="trying to fix" />
+    <MESSAGE value="fix tests and for test" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix tests and for test" />
   </component>
 </project>

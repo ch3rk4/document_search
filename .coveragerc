@@ -16,6 +16,7 @@ omit =
     */conftest.py
     */setup.py
     */setup.cfg
+    src/document_search/settings.py
 
 [report]
 exclude_lines =

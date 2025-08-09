@@ -1,8 +1,9 @@
 """
 Тесты для алгоритмов поиска
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from search_service.algorithms import TextSearchAlgorithms, WordSearchService
 
@@ -18,12 +19,12 @@ class TestTextSearchAlgorithms:
             ("ЗАГЛАВНЫЕ буквы", "заглавные буквы"),
             ("Знаки препинания: точка, запятая;", "знаки препинания точка запятая"),
             ("", ""),
-            ("   ", "")
+            ("   ", ""),
         ]
 
         for input_text, expected in test_cases:
             result = TextSearchAlgorithms.normalize_text(input_text)
-            assert result == expected, f"Для '{input_text}' ожидалось '{expected}', получено '{result}'"
+            assert result == expected, f"Для '{input_text}' ожидалось '{expected}', получено '{result.strip()}'"
 
     def test_build_failure_function(self):
         """Тест построения функции отказа для КМП"""
@@ -32,7 +33,7 @@ class TestTextSearchAlgorithms:
             ("ababaca", [0, 0, 1, 2, 3, 0, 1]),
             ("aaa", [0, 1, 2]),
             ("abc", [0, 0, 0]),
-            ("", [])
+            ("", []),
         ]
 
         for pattern, expected in test_cases:
@@ -44,11 +45,11 @@ class TestTextSearchAlgorithms:
         text = "это тестовый текст для тестирования поиска"
 
         test_cases = [
-            ("тест", [4, 24]),  # Должен найти "тест" в "тестовый" и "тестирования"
-            ("для", [20]),
-            ("поиска", [39]),
+            ("тест", [4, 23]),  # Должен найти "тест" в "тестовый" и "тестирования"
+            ("для", [19]),
+            ("поиска", [36]),
             ("несуществующий", []),
-            ("", [])
+            ("", []),
         ]
 
         for pattern, expected in test_cases:
@@ -73,13 +74,7 @@ class TestTextSearchAlgorithms:
         """Тест алгоритма Бойера-Мура"""
         text = "это тестовый текст для тестирования"
 
-        test_cases = [
-            ("тест", [4, 20]),
-            ("это", [0]),
-            ("текст", [13]),
-            ("несуществующий", []),
-            ("", [])
-        ]
+        test_cases = [("тест", [4, 23]), ("это", [0]), ("текст", [13]), ("несуществующий", []), ("", [])]
 
         for pattern, expected in test_cases:
             result = TextSearchAlgorithms.boyer_moore_search(text, pattern)
@@ -109,7 +104,7 @@ class TestTextSearchAlgorithms:
         # Поиск с точным совпадением
         result = TextSearchAlgorithms.fuzzy_search(text, "python")
         assert len(result) >= 1
-        assert any(match['word'] == 'python' for match in result)
+        assert any(match["word"] == "python" for match in result)
 
         # Поиск с похожим словом
         result = TextSearchAlgorithms.fuzzy_search(text, "програмирование")  # с опечаткой
@@ -125,13 +120,13 @@ class TestTextSearchAlgorithms:
         result = TextSearchAlgorithms.fuzzy_search(text, "тест")
 
         # Проверяем, что результаты отсортированы по схожести
-        similarities = [match['similarity'] for match in result]
+        similarities = [match["similarity"] for match in result]
         assert similarities == sorted(similarities, reverse=True)
 
         # Точное совпадение должно иметь максимальную схожесть
-        exact_match = next((m for m in result if m['word'] == 'тест'), None)
+        exact_match = next((m for m in result if m["word"] == "тест"), None)
         assert exact_match is not None
-        assert exact_match['similarity'] == 1.0
+        assert exact_match["similarity"] == 1.0
 
     def test_get_context(self):
         """Тест получения контекста вокруг найденного слова"""
@@ -190,17 +185,15 @@ class TestWordSearchService:
         assert self.search_service.algorithms is not None
         assert isinstance(self.search_service.algorithms, TextSearchAlgorithms)
 
-    @patch('doc_storage.models.WordMatch.objects.filter')
-    @patch('doc_storage.models.WordMatch.objects.bulk_create')
+    @patch("doc_storage.models.WordMatch.objects.filter")
+    @patch("doc_storage.models.WordMatch.objects.bulk_create")
     def test_search_words_in_document_exact(self, mock_bulk_create, mock_filter, test_document):
         """Тест точного поиска слов в документе"""
         # Настраиваем мок
         mock_filter.return_value.delete.return_value = None
 
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="тестовый",
-            search_type="exact"
+            document=test_document, query="тестовый", search_type="exact"
         )
 
         assert isinstance(matches, list)
@@ -210,25 +203,21 @@ class TestWordSearchService:
         # Проверяем, что метод удаления старых результатов был вызван
         mock_filter.assert_called()
 
-    @patch('doc_storage.models.WordMatch.objects.filter')
+    @patch("doc_storage.models.WordMatch.objects.filter")
     def test_search_words_empty_query(self, mock_filter, test_document):
         """Тест поиска с пустым запросом"""
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="",
-            search_type="exact"
+            document=test_document, query="", search_type="exact"
         )
 
         assert matches == []
         assert search_time == 0.0
 
-    @patch('doc_storage.models.WordMatch.objects.filter')
+    @patch("doc_storage.models.WordMatch.objects.filter")
     def test_search_words_short_query(self, mock_filter, test_document):
         """Тест поиска с коротким запросом"""
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query=" ",  # Только пробел
-            search_type="exact"
+            document=test_document, query=" ", search_type="exact"  # Только пробел
         )
 
         assert matches == []
@@ -245,13 +234,13 @@ class TestWordSearchService:
         # Проверяем структуру результатов
         if matches:
             match = matches[0]
-            assert 'document' in match
-            assert 'query' in match
-            assert 'matched_word' in match
-            assert 'position' in match
-            assert 'match_type' in match
-            assert 'relevance_score' in match
-            assert 'algorithm' in match
+            assert "document" in match
+            assert "query" in match
+            assert "matched_word" in match
+            assert "position" in match
+            assert "match_type" in match
+            assert "relevance_score" in match
+            assert "algorithm" in match
 
     def test_partial_word_search(self, test_document):
         """Тест метода частичного поиска слов"""
@@ -263,64 +252,60 @@ class TestWordSearchService:
         # Должен найти части слов
         if matches:
             for match in matches:
-                assert match['match_type'] == 'partial'
-                assert 'прог' in match['matched_word'].lower()
+                assert match["match_type"] == "partial"
+                assert "прог" in match["matched_word"].lower()
 
     def test_fuzzy_word_search(self, test_document):
         """Тест метода нечеткого поиска слов"""
         test_document.content = "программирование разработка"
 
-        matches = self.search_service._fuzzy_word_search(test_document, "программирование разработка",
-                                                         "програмирование")
+        matches = self.search_service._fuzzy_word_search(
+            test_document, "программирование разработка", "програмирование"
+        )
 
         assert isinstance(matches, list)
         if matches:
             for match in matches:
-                assert match['match_type'] == 'fuzzy'
-                assert isinstance(match['relevance_score'], float)
-                assert 0 <= match['relevance_score'] <= 1
+                assert match["match_type"] == "fuzzy"
+                assert isinstance(match["relevance_score"], float)
+                assert 0 <= match["relevance_score"] <= 1
 
     def test_remove_duplicates(self, test_document):
         """Тест удаления дубликатов"""
         matches = [
+            {"document": test_document, "position": 0, "matched_word": "тест", "relevance_score": 1.0},
             {
-                'document': test_document,
-                'position': 0,
-                'matched_word': 'тест',
-                'relevance_score': 1.0
+                "document": test_document,
+                "position": 0,  # Та же позиция
+                "matched_word": "тест",  # То же слово
+                "relevance_score": 0.8,
             },
             {
-                'document': test_document,
-                'position': 0,  # Та же позиция
-                'matched_word': 'тест',  # То же слово
-                'relevance_score': 0.8
+                "document": test_document,
+                "position": 10,  # Другая позиция
+                "matched_word": "тест",
+                "relevance_score": 0.9,
             },
-            {
-                'document': test_document,
-                'position': 10,  # Другая позиция
-                'matched_word': 'тест',
-                'relevance_score': 0.9
-            }
         ]
 
         unique_matches = self.search_service._remove_duplicates(matches)
 
         assert len(unique_matches) == 2  # Один дубликат должен быть удален
-        positions = [match['position'] for match in unique_matches]
+        positions = [match["position"] for match in unique_matches]
         assert 0 in positions
         assert 10 in positions
 
-    @patch('doc_storage.models.WordMatch.objects.bulk_create')
+    @patch("doc_storage.models.WordMatch.objects.bulk_create")
     def test_save_word_matches(self, mock_bulk_create, test_document):
         """Тест сохранения найденных слов"""
         matches = [
             {
-                'matched_word': 'тест',
-                'position': 0,
-                'context_before': 'контекст до',
-                'context_after': 'контекст после',
-                'match_type': 'exact',
-                'relevance_score': 1.0
+                "matched_word": "тест",
+                "position": 0,
+                "context_before": "контекст до",
+                "context_after": "контекст после",
+                "match_type": "exact",
+                "relevance_score": 1.0,
             }
         ]
 
@@ -339,7 +324,7 @@ class TestWordSearchService:
         assert word_match.query == "тест"
         assert word_match.matched_word == "тест"
 
-    @patch('doc_storage.models.SearchHistory.objects.create')
+    @patch("doc_storage.models.SearchHistory.objects.create")
     def test_save_search_history(self, mock_create, test_document, regular_user):
         """Тест сохранения истории поиска"""
         self.search_service._save_search_history(
@@ -348,7 +333,7 @@ class TestWordSearchService:
             results_count=5,
             search_time=0.1,
             user=regular_user,
-            ip_address="127.0.0.1"
+            ip_address="127.0.0.1",
         )
 
         mock_create.assert_called_once_with(
@@ -357,10 +342,10 @@ class TestWordSearchService:
             user=regular_user,
             results_count=5,
             search_time=0.1,
-            ip_address="127.0.0.1"
+            ip_address="127.0.0.1",
         )
 
-    @patch('doc_storage.models.WordMatch.objects.filter')
+    @patch("doc_storage.models.WordMatch.objects.filter")
     def test_get_search_results(self, mock_filter, test_document):
         """Тест получения результатов поиска"""
         # Настраиваем мок
@@ -386,18 +371,14 @@ class TestSearchIntegration:
         document = search_test_data[0]  # Документ с содержимым о Python
 
         matches, search_time = self.search_service.search_words_in_document(
-            document=document,
-            query="прог",
-            search_type="combined",
-            user=regular_user,
-            ip_address="127.0.0.1"
+            document=document, query="прог", search_type="combined", user=regular_user, ip_address="127.0.0.1"
         )
 
         assert isinstance(matches, list)
         assert search_time > 0
 
         # В комбинированном поиске должны быть разные типы совпадений
-        match_types = [match['match_type'] for match in matches]
+        match_types = [match["match_type"] for match in matches]
         # Может содержать exact, partial, fuzzy
         assert len(set(match_types)) >= 1
 
@@ -406,10 +387,7 @@ class TestSearchIntegration:
         document = search_test_data[0]
 
         matches, search_time = self.search_service.search_words_in_document(
-            document=document,
-            query="python",
-            search_type="exact",
-            user=regular_user
+            document=document, query="python", search_type="exact", user=regular_user
         )
 
         # Поиск должен выполняться достаточно быстро
@@ -421,10 +399,7 @@ class TestSearchIntegration:
         test_document.save()
 
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="символами",
-            search_type="exact",
-            user=regular_user
+            document=test_document, query="символами", search_type="exact", user=regular_user
         )
 
         assert isinstance(matches, list)
@@ -437,10 +412,7 @@ class TestSearchIntegration:
 
         # Поиск строчными буквами
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="заглавные",
-            search_type="exact",
-            user=regular_user
+            document=test_document, query="заглавные", search_type="exact", user=regular_user
         )
 
         assert len(matches) >= 1
@@ -451,17 +423,14 @@ class TestSearchIntegration:
         test_document.save()
 
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="тест",
-            search_type="combined",
-            user=regular_user
+            document=test_document, query="тест", search_type="combined", user=regular_user
         )
 
         # Должен найти все вхождения
         assert len(matches) >= 3
 
         # Проверяем разные позиции
-        positions = [match['position'] for match in matches]
+        positions = [match["position"] for match in matches]
         assert len(set(positions)) >= 3
 
 
@@ -475,45 +444,42 @@ class TestErrorHandling:
     def test_search_with_none_document(self):
         """Тест поиска с None вместо документа"""
         with pytest.raises(AttributeError):
-            self.search_service.search_words_in_document(
-                document=None,
-                query="тест",
-                search_type="exact"
-            )
+            self.search_service.search_words_in_document(document=None, query="тест", search_type="exact")
 
     def test_search_with_invalid_search_type(self, test_document):
         """Тест поиска с неверным типом поиска"""
         # Неверный тип должен просто игнорироваться
         matches, search_time = self.search_service.search_words_in_document(
-            document=test_document,
-            query="тест",
-            search_type="invalid_type"
+            document=test_document, query="тест", search_type="invalid_type"
         )
 
         assert matches == []
         assert search_time >= 0
 
-    @patch('doc_storage.models.WordMatch.objects.bulk_create')
+    @patch("doc_storage.models.WordMatch.objects.bulk_create")
     def test_save_word_matches_exception(self, mock_bulk_create, test_document):
         """Тест обработки исключения при сохранении совпадений"""
         # Настраиваем мок для генерации исключения
         mock_bulk_create.side_effect = Exception("Database error")
 
-        matches = [{'matched_word': 'тест', 'position': 0, 'context_before': '',
-                    'context_after': '', 'match_type': 'exact', 'relevance_score': 1.0}]
+        matches = [
+            {
+                "matched_word": "тест",
+                "position": 0,
+                "context_before": "",
+                "context_after": "",
+                "match_type": "exact",
+                "relevance_score": 1.0,
+            }
+        ]
 
         # Не должно выбрасывать исключение
         self.search_service._save_word_matches(test_document, "тест", matches)
 
-    @patch('doc_storage.models.SearchHistory.objects.create')
+    @patch("doc_storage.models.SearchHistory.objects.create")
     def test_save_search_history_exception(self, mock_create, test_document):
         """Тест обработки исключения при сохранении истории"""
         mock_create.side_effect = Exception("Database error")
 
         # Не должно выбрасывать исключение
-        self.search_service._save_search_history(
-            query="тест",
-            document=test_document,
-            results_count=0,
-            search_time=0.1
-        )
+        self.search_service._save_search_history(query="тест", document=test_document, results_count=0, search_time=0.1)

@@ -4,10 +4,8 @@
 import pytest
 from django.db import IntegrityError
 
-from doc_storage.models import (
-    Document, DocumentCategory, DocumentTag,
-    DocumentTagRelation, WordMatch, SearchHistory
-)
+from doc_storage.models import (Document, DocumentCategory, DocumentTag,
+                                DocumentTagRelation, SearchHistory, WordMatch)
 
 
 @pytest.mark.django_db
@@ -17,10 +15,7 @@ class TestDocumentCategory:
     @pytest.mark.django_db
     def test_create_category(self):
         """Тест создания категории"""
-        category = DocumentCategory.objects.create(
-            name="Тестовая категория",
-            description="Описание тестовой категории"
-        )
+        category = DocumentCategory.objects.create(name="Тестовая категория", description="Описание тестовой категории")
 
         assert category.name == "Тестовая категория"
         assert category.description == "Описание тестовой категории"
@@ -58,10 +53,7 @@ class TestDocumentTag:
     @pytest.mark.django_db
     def test_create_tag(self):
         """Тест создания тега"""
-        tag = DocumentTag.objects.create(
-            name="python",
-            color="#3776ab"
-        )
+        tag = DocumentTag.objects.create(name="python", color="#3776ab")
 
         assert tag.name == "python"
         assert tag.color == "#3776ab"
@@ -106,7 +98,7 @@ class TestDocument:
             title="Тестовый документ",
             content="Содержимое тестового документа",
             author=regular_user,
-            category=test_category
+            category=test_category,
         )
 
         assert document.title == "Тестовый документ"
@@ -123,11 +115,7 @@ class TestDocument:
     def test_document_word_count_calculation(self, regular_user):
         """Тест автоматического подсчета слов"""
         content = "Это тестовый документ с пятью различными словами"
-        document = Document.objects.create(
-            title="Тест",
-            content=content,
-            author=regular_user
-        )
+        document = Document.objects.create(title="Тест", content=content, author=regular_user)
 
         expected_count = len(content.split())
         assert document.word_count == expected_count
@@ -135,33 +123,21 @@ class TestDocument:
     @pytest.mark.django_db
     def test_document_word_count_empty_content(self, regular_user):
         """Тест подсчета слов для пустого содержимого"""
-        document = Document.objects.create(
-            title="Пустой документ",
-            content="",
-            author=regular_user
-        )
+        document = Document.objects.create(title="Пустой документ", content="", author=regular_user)
 
         assert document.word_count == 0
 
     @pytest.mark.django_db
     def test_document_word_count_whitespace_content(self, regular_user):
         """Тест подсчета слов для содержимого только с пробелами"""
-        document = Document.objects.create(
-            title="Пробелы",
-            content="   \n\t   ",
-            author=regular_user
-        )
+        document = Document.objects.create(title="Пробелы", content="   \n\t   ", author=regular_user)
 
         assert document.word_count == 0
 
     @pytest.mark.django_db
     def test_document_without_category(self, regular_user):
         """Тест создания документа без категории"""
-        document = Document.objects.create(
-            title="Без категории",
-            content="Содержимое",
-            author=regular_user
-        )
+        document = Document.objects.create(title="Без категории", content="Содержимое", author=regular_user)
 
         assert document.category is None
 
@@ -169,10 +145,7 @@ class TestDocument:
     def test_document_inactive(self, regular_user):
         """Тест создания неактивного документа"""
         document = Document.objects.create(
-            title="Неактивный",
-            content="Содержимое",
-            author=regular_user,
-            is_active=False
+            title="Неактивный", content="Содержимое", author=regular_user, is_active=False
         )
 
         assert document.is_active is False
@@ -180,12 +153,8 @@ class TestDocument:
     @pytest.mark.django_db
     def test_document_ordering(self, regular_user):
         """Тест сортировки документов по дате создания"""
-        doc1 = Document.objects.create(
-            title="Первый", content="Содержимое", author=regular_user
-        )
-        doc2 = Document.objects.create(
-            title="Второй", content="Содержимое", author=regular_user
-        )
+        doc1 = Document.objects.create(title="Первый", content="Содержимое", author=regular_user)
+        doc2 = Document.objects.create(title="Второй", content="Содержимое", author=regular_user)
 
         documents = list(Document.objects.all())
         assert documents[0] == doc2  # Новее должен быть первым
@@ -204,10 +173,7 @@ class TestDocumentTagRelation:
     @pytest.mark.django_db
     def test_create_tag_relation(self, test_document, test_tag):
         """Тест создания связи документ-тег"""
-        relation = DocumentTagRelation.objects.create(
-            document=test_document,
-            tag=test_tag
-        )
+        relation = DocumentTagRelation.objects.create(document=test_document, tag=test_tag)
 
         assert relation.document == test_document
         assert relation.tag == test_tag
@@ -217,16 +183,10 @@ class TestDocumentTagRelation:
     @pytest.mark.django_db
     def test_unique_document_tag_relation(self, test_document, test_tag):
         """Тест уникальности связи документ-тег"""
-        DocumentTagRelation.objects.create(
-            document=test_document,
-            tag=test_tag
-        )
+        DocumentTagRelation.objects.create(document=test_document, tag=test_tag)
 
         with pytest.raises(IntegrityError):
-            DocumentTagRelation.objects.create(
-                document=test_document,
-                tag=test_tag
-            )
+            DocumentTagRelation.objects.create(document=test_document, tag=test_tag)
 
     @pytest.mark.django_db
     def test_multiple_tags_for_document(self, test_document):
@@ -256,7 +216,7 @@ class TestWordMatch:
             context_before="Это ",
             context_after=" документ",
             match_type="partial",
-            relevance_score=0.8
+            relevance_score=0.8,
         )
 
         assert word_match.document == test_document
@@ -273,10 +233,7 @@ class TestWordMatch:
     def test_word_match_str_representation(self, test_document):
         """Тест строкового представления совпадения"""
         word_match = WordMatch.objects.create(
-            document=test_document,
-            query="тест",
-            matched_word="тестовый",
-            position=10
+            document=test_document, query="тест", matched_word="тестовый", position=10
         )
 
         expected = f"тестовый в {test_document.title}"
@@ -286,18 +243,10 @@ class TestWordMatch:
     def test_word_match_ordering(self, test_document):
         """Тест сортировки совпадений"""
         match1 = WordMatch.objects.create(
-            document=test_document,
-            query="тест",
-            matched_word="тест1",
-            position=20,
-            relevance_score=0.7
+            document=test_document, query="тест", matched_word="тест1", position=20, relevance_score=0.7
         )
         match2 = WordMatch.objects.create(
-            document=test_document,
-            query="тест",
-            matched_word="тест2",
-            position=10,
-            relevance_score=0.9
+            document=test_document, query="тест", matched_word="тест2", position=10, relevance_score=0.9
         )
 
         matches = list(WordMatch.objects.all())
@@ -315,7 +264,7 @@ class TestWordMatch:
             matched_word="тест",
             position=10,
             context_before=long_context,
-            context_after=long_context
+            context_after=long_context,
         )
 
         assert len(word_match.context_before) == 200
@@ -328,11 +277,7 @@ class TestWordMatch:
 
         for match_type in valid_types:
             word_match = WordMatch.objects.create(
-                document=test_document,
-                query="тест",
-                matched_word="тест",
-                position=10,
-                match_type=match_type
+                document=test_document, query="тест", matched_word="тест", position=10, match_type=match_type
             )
             assert word_match.match_type == match_type
 
@@ -350,7 +295,7 @@ class TestSearchHistory:
             user=regular_user,
             results_count=5,
             search_time=0.123,
-            ip_address="127.0.0.1"
+            ip_address="127.0.0.1",
         )
 
         assert search_history.query == "python"
@@ -365,10 +310,7 @@ class TestSearchHistory:
     def test_search_history_without_user(self, test_document):
         """Тест создания истории поиска без пользователя"""
         search_history = SearchHistory.objects.create(
-            query="anonymous search",
-            document=test_document,
-            results_count=3,
-            search_time=0.05
+            query="anonymous search", document=test_document, results_count=3, search_time=0.05
         )
 
         assert search_history.user is None
@@ -377,10 +319,7 @@ class TestSearchHistory:
     def test_search_history_str_representation(self, test_document, regular_user):
         """Тест строкового представления истории поиска"""
         search_history = SearchHistory.objects.create(
-            query="тест",
-            document=test_document,
-            user=regular_user,
-            results_count=2
+            query="тест", document=test_document, user=regular_user, results_count=2
         )
 
         expected = f"тест в {test_document.title} (2 результатов)"
@@ -389,16 +328,8 @@ class TestSearchHistory:
     @pytest.mark.django_db
     def test_search_history_ordering(self, test_document, regular_user):
         """Тест сортировки истории поиска"""
-        history1 = SearchHistory.objects.create(
-            query="первый",
-            document=test_document,
-            user=regular_user
-        )
-        history2 = SearchHistory.objects.create(
-            query="второй",
-            document=test_document,
-            user=regular_user
-        )
+        history1 = SearchHistory.objects.create(query="первый", document=test_document, user=regular_user)
+        history2 = SearchHistory.objects.create(query="второй", document=test_document, user=regular_user)
 
         histories = list(SearchHistory.objects.all())
         assert histories[0] == history2  # Новее должен быть первым
@@ -407,10 +338,7 @@ class TestSearchHistory:
     @pytest.mark.django_db
     def test_search_history_default_values(self, test_document):
         """Тест значений по умолчанию"""
-        search_history = SearchHistory.objects.create(
-            query="тест",
-            document=test_document
-        )
+        search_history = SearchHistory.objects.create(query="тест", document=test_document)
 
         assert search_history.results_count == 0
         assert search_history.search_time == 0.0
@@ -449,28 +377,18 @@ class TestModelRelationships:
     def test_tag_relation_cascade(self, test_document_with_tags, test_tag):
         """Тест каскадного удаления связей при удалении тега"""
         # Проверяем, что связь существует
-        assert DocumentTagRelation.objects.filter(
-            document=test_document_with_tags,
-            tag=test_tag
-        ).exists()
+        assert DocumentTagRelation.objects.filter(document=test_document_with_tags, tag=test_tag).exists()
 
         # Удаляем тег
         test_tag.delete()
 
         # Связь должна быть удалена
-        assert not DocumentTagRelation.objects.filter(
-            document=test_document_with_tags
-        ).exists()
+        assert not DocumentTagRelation.objects.filter(document=test_document_with_tags).exists()
 
     @pytest.mark.django_db
     def test_word_match_document_cascade(self, test_document):
         """Тест каскадного удаления совпадений при удалении документа"""
-        word_match = WordMatch.objects.create(
-            document=test_document,
-            query="тест",
-            matched_word="тест",
-            position=10
-        )
+        word_match = WordMatch.objects.create(document=test_document, query="тест", matched_word="тест", position=10)
 
         match_id = word_match.id
 
@@ -483,11 +401,7 @@ class TestModelRelationships:
     @pytest.mark.django_db
     def test_search_history_document_cascade(self, test_document, regular_user):
         """Тест каскадного удаления истории при удалении документа"""
-        search_history = SearchHistory.objects.create(
-            query="тест",
-            document=test_document,
-            user=regular_user
-        )
+        search_history = SearchHistory.objects.create(query="тест", document=test_document, user=regular_user)
 
         history_id = search_history.id
 
@@ -512,9 +426,9 @@ class TestModelIndexes:
         for index in meta.indexes:
             index_fields.extend(index.fields)
 
-        expected_fields = ['title', 'created_at', 'category', 'author']
+        expected_fields = ["title", "created_at", "category", "author"]
         for field in expected_fields:
-            assert field in index_fields or f'-{field}' in index_fields
+            assert field in index_fields or f"-{field}" in index_fields
 
     @pytest.mark.django_db
     def test_word_match_indexes_exist(self):
@@ -526,7 +440,7 @@ class TestModelIndexes:
             for field in index.fields:
                 index_fields.append(field)
 
-        expected_fields = ['matched_word', 'position']
+        expected_fields = ["matched_word", "position"]
         for field in expected_fields:
             assert field in index_fields
 
@@ -540,6 +454,6 @@ class TestModelIndexes:
             for field in index.fields:
                 index_fields.append(field)
 
-        expected_fields = ['query', 'document', 'created_at', 'user']
+        expected_fields = ["query", "document", "created_at", "user"]
         for field in expected_fields:
             assert field in index_fields

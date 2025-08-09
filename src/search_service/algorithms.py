@@ -18,11 +18,12 @@ class TextSearchAlgorithms:
     def normalize_text(text: str) -> str:
         """Нормализация текста для поиска"""
         # Приведение к нижнему регистру и удаление лишних пробелов
-        text = text.lower().strip()
+        text = text.lower()
         # Удаление специальных символов, кроме русских и английских букв, цифр и пробелов
         text = re.sub(r"[^\w\s]", " ", text)
         # Замена множественных пробелов на одинарные
         text = re.sub(r"\s+", " ", text)
+        text = text.strip()
         return text
 
     @staticmethod

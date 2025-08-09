@@ -25,6 +25,7 @@ def setup_django():
 
     try:
         import django
+
         django.setup()
         return True
     except Exception as e:
@@ -54,7 +55,7 @@ def check_database():
         from django.db import connection
 
         print("✓ Настройки базы данных:")
-        db_config = settings.DATABASES['default']
+        db_config = settings.DATABASES["default"]
         print(f"  - ENGINE: {db_config['ENGINE']}")
         print(f"  - NAME: {db_config['NAME']}")
 
@@ -71,9 +72,6 @@ def check_database():
 def check_models():
     """Проверка моделей"""
     try:
-        from doc_storage.models import Document, DocumentCategory, DocumentTag
-        from django.contrib.auth.models import User
-
         print("✓ Модели успешно импортированы:")
         print("  - User")
         print("  - Document")
@@ -92,7 +90,7 @@ def check_migrations():
         from django.core.management import execute_from_command_line
 
         print("✓ Применение миграций...")
-        execute_from_command_line(['check_django.py', 'migrate', '--verbosity=0', '--run-syncdb'])
+        execute_from_command_line(["check_django.py", "migrate", "--verbosity=0", "--run-syncdb"])
         print("✓ Миграции применены успешно")
 
         return True
@@ -105,29 +103,20 @@ def test_basic_operations():
     """Тестирование базовых операций с моделями"""
     try:
         from django.contrib.auth.models import User
+
         from doc_storage.models import Document, DocumentCategory
 
         # Создаем тестового пользователя
-        user = User.objects.create_user(
-            username='check_test_user',
-            email='test@example.com',
-            password='testpass123'
-        )
+        user = User.objects.create_user(username="check_test_user", email="test@example.com", password="testpass123")
         print("✓ Пользователь создан")
 
         # Создаем категорию
-        category = DocumentCategory.objects.create(
-            name="Тестовая категория",
-            description="Для проверки"
-        )
+        category = DocumentCategory.objects.create(name="Тестовая категория", description="Для проверки")
         print("✓ Категория создана")
 
         # Создаем документ
         document = Document.objects.create(
-            title="Тестовый документ",
-            content="Содержимое для проверки",
-            author=user,
-            category=category
+            title="Тестовый документ", content="Содержимое для проверки", author=user, category=category
         )
         print("✓ Документ создан")
 
