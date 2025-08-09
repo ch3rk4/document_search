@@ -2,6 +2,7 @@
 Тесты для моделей приложения doc_storage
 """
 import pytest
+from django.core.management import call_command
 from django.db import IntegrityError
 
 from doc_storage.models import (

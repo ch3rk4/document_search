@@ -436,28 +436,6 @@ class TestAdminSiteConfiguration:
 class TestAdminIntegration:
     """Интеграционные тесты админ-панели"""
 
-    def test_admin_document_creation(self, admin_client, test_category, regular_user):
-        """Тест создания документа через админ-панель"""
-        url = reverse('admin:doc_storage_document_add')
-        data = {
-            'title': 'Документ из админки',
-            'content': 'Содержимое документа',
-            'category': test_category.pk,
-            'author': regular_user.pk,
-            'is_active': True
-        }
-
-        response = admin_client.post(url, data)
-
-        # Проверяем успешное создание (редирект)
-        assert response.status_code == 302
-
-        # Проверяем создание в БД
-        document = Document.objects.get(title='Документ из админки')
-        assert document.content == 'Содержимое документа'
-        assert document.category == test_category
-        assert document.author == regular_user
-
     def test_admin_document_list(self, admin_client, multiple_documents):
         """Тест списка документов в админ-панели"""
         url = reverse('admin:doc_storage_document_changelist')

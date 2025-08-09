@@ -23,7 +23,7 @@ class TestTextSearchAlgorithms:
 
         for input_text, expected in test_cases:
             result = TextSearchAlgorithms.normalize_text(input_text)
-            assert result == expected, f"Для '{input_text}' ожидалось '{expected}', получено '{result}'"
+            assert result == expected, f"Для '{input_text}' ожидалось '{expected}', получено '{result.strip()}'"
 
     def test_build_failure_function(self):
         """Тест построения функции отказа для КМП"""
@@ -44,9 +44,9 @@ class TestTextSearchAlgorithms:
         text = "это тестовый текст для тестирования поиска"
 
         test_cases = [
-            ("тест", [4, 24]),  # Должен найти "тест" в "тестовый" и "тестирования"
-            ("для", [20]),
-            ("поиска", [39]),
+            ("тест", [4, 23]),  # Должен найти "тест" в "тестовый" и "тестирования"
+            ("для", [19]),
+            ("поиска", [36]),
             ("несуществующий", []),
             ("", [])
         ]
@@ -74,7 +74,7 @@ class TestTextSearchAlgorithms:
         text = "это тестовый текст для тестирования"
 
         test_cases = [
-            ("тест", [4, 20]),
+            ("тест", [4, 23]),
             ("это", [0]),
             ("текст", [13]),
             ("несуществующий", []),

@@ -25,6 +25,7 @@ from django.test import Client
 @pytest.fixture(scope="session")
 def django_db_setup(django_db_blocker):
     """Настройка тестовой базы данных — применяем миграции с разблокировкой доступа"""
+    from django.core.management import call_command
     with django_db_blocker.unblock():
         call_command('migrate', verbosity=0, interactive=False)
 

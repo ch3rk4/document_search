@@ -1,7 +1,11 @@
 """
 Настройки Django для тестов
 """
+import os
+
 from typing import Any, Dict
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Базовые настройки Django
 SECRET_KEY = "test-secret-key-for-tests-only"
@@ -58,7 +62,7 @@ ROOT_URLCONF = "document_search.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],  # указываем папку с шаблонами
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
