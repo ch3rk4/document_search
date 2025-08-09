@@ -1,415 +1,500 @@
-from django.contrib.auth.models import User
+"""
+Тесты для моделей приложения doc_storage
+"""
+import pytest
 from django.db import IntegrityError
-from django.test import TestCase
 
-from doc_storage.models import (Document, DocumentCategory, DocumentTag,
-                                DocumentTagRelation, SearchHistory, WordMatch)
-
-
-class DocumentModelTest(TestCase):
-    """Тесты для модели Document"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
-        self.category = DocumentCategory.objects.create(
-            name="Тестовая категория", description="Описание тестовой категории"
-        )
-
-    def test_document_creation(self):
-        """Тест создания документа"""
-        document = Document.objects.create(
-            title="Тестовый документ",
-            content="Содержимое тестового документа для проверки функциональности python программирование",
-            author=self.user,
-            category=self.category,
-        )
-
-        self.assertEqual(document.title, "Тестовый документ")
-        self.assertEqual(document.author, self.user)
-        self.assertEqual(document.category, self.category)
-        self.assertTrue(document.is_active)
-        self.assertEqual(document.word_count, 8)  # Количество слов в content
-
-    def test_document_str_method(self):
-        """Тест строкового представления документа"""
-        document = Document.objects.create(title="Тестовый документ", content="Содержимое", author=self.user)
-
-        self.assertEqual(str(document), "Тестовый документ")
-
-    def test_word_count_calculation(self):
-        """Тест подсчета количества слов"""
-        document = Document.objects.create(title="Заголовок", content="Один два три четыре пять слов", author=self.user)
-
-        self.assertEqual(document.word_count, 6)
-
-    def test_empty_content_word_count(self):
-        """Тест подсчета слов при пустом содержимом"""
-        document = Document.objects.create(title="Заголовок", content="", author=self.user)
-
-        self.assertEqual(document.word_count, 0)
-
-    def test_document_with_file_path(self):
-        """Тест документа с файлом"""
-        document = Document.objects.create(
-            title="Документ с файлом", content="Содержимое из файла", file_path="documents/test.txt", author=self.user
-        )
-
-        self.assertTrue(document.file_path)
-        self.assertEqual(str(document.file_path), "documents/test.txt")
+from doc_storage.models import (
+    Document, DocumentCategory, DocumentTag,
+    DocumentTagRelation, WordMatch, SearchHistory
+)
 
 
-class DocumentCategoryModelTest(TestCase):
-    """Тесты для модели DocumentCategory"""
+class TestDocumentCategory:
+    """Тесты модели DocumentCategory"""
 
-    def test_category_creation(self):
+    def test_create_category(self, db):
         """Тест создания категории"""
-        category = DocumentCategory.objects.create(name="Программирование", description="Статьи о программировании")
+        category = DocumentCategory.objects.create(
+            name="Тестовая категория",
+            description="Описание тестовой категории"
+        )
 
-        self.assertEqual(category.name, "Программирование")
-        self.assertEqual(category.description, "Статьи о программировании")
+        assert category.name == "Тестовая категория"
+        assert category.description == "Описание тестовой категории"
+        assert category.created_at is not None
+        assert str(category) == "Тестовая категория"
 
-    def test_category_str_method(self):
+    def test_category_str_representation(self, test_category):
         """Тест строкового представления категории"""
-        category = DocumentCategory.objects.create(name="Наука", description="Научные статьи")
+        assert str(test_category) == "Тестовая категория"
 
-        self.assertEqual(str(category), "Наука")
-
-    def test_category_ordering(self):
+    def test_category_ordering(self, db):
         """Тест сортировки категорий по имени"""
-        cat1 = DocumentCategory.objects.create(name="Я_Последняя")
-        cat2 = DocumentCategory.objects.create(name="А_Первая")
-        cat3 = DocumentCategory.objects.create(name="В_Средняя")
+        category_b = DocumentCategory.objects.create(name="B категория")
+        category_a = DocumentCategory.objects.create(name="A категория")
+        category_c = DocumentCategory.objects.create(name="C категория")
 
         categories = list(DocumentCategory.objects.all())
-        self.assertEqual(categories[0].name, "А_Первая")
-        self.assertEqual(categories[1].name, "В_Средняя")
-        self.assertEqual(categories[2].name, "Я_Последняя")
+        assert categories[0].name == "A категория"
+        assert categories[1].name == "B категория"
+        assert categories[2].name == "C категория"
 
-    def test_category_without_description(self):
+    def test_category_without_description(self, db):
         """Тест создания категории без описания"""
         category = DocumentCategory.objects.create(name="Без описания")
-        self.assertEqual(category.description, "")
+        assert category.description == ""
 
 
-class DocumentTagModelTest(TestCase):
-    """Тесты для модели DocumentTag"""
+class TestDocumentTag:
+    """Тесты модели DocumentTag"""
 
-    def test_tag_creation(self):
+    def test_create_tag(self, db):
         """Тест создания тега"""
-        tag = DocumentTag.objects.create(name="python", color="#ff0000")
+        tag = DocumentTag.objects.create(
+            name="python",
+            color="#3776ab"
+        )
 
-        self.assertEqual(tag.name, "python")
-        self.assertEqual(tag.color, "#ff0000")
+        assert tag.name == "python"
+        assert tag.color == "#3776ab"
+        assert tag.created_at is not None
+        assert str(tag) == "python"
 
-    def test_tag_str_method(self):
-        """Тест строкового представления тега"""
-        tag = DocumentTag.objects.create(name="javascript")
-        self.assertEqual(str(tag), "javascript")
-
-    def test_tag_default_color(self):
-        """Тест цвета тега по умолчанию"""
-        tag = DocumentTag.objects.create(name="defaultcolor")
-        self.assertEqual(tag.color, "#007bff")
-
-    def test_tag_unique_name(self):
+    def test_tag_unique_name(self, db):
         """Тест уникальности имени тега"""
         DocumentTag.objects.create(name="python")
 
-        with self.assertRaises(IntegrityError):
+        with pytest.raises(IntegrityError):
             DocumentTag.objects.create(name="python")
 
+    def test_tag_default_color(self, db):
+        """Тест цвета тега по умолчанию"""
+        tag = DocumentTag.objects.create(name="test")
+        assert tag.color == "#007bff"
 
-class WordMatchModelTest(TestCase):
-    """Тесты для модели WordMatch"""
+    def test_tag_ordering(self, db):
+        """Тест сортировки тегов по имени"""
+        DocumentTag.objects.create(name="zebra")
+        DocumentTag.objects.create(name="alpha")
+        DocumentTag.objects.create(name="beta")
 
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-        self.document = Document.objects.create(
+        tags = list(DocumentTag.objects.all())
+        assert tags[0].name == "alpha"
+        assert tags[1].name == "beta"
+        assert tags[2].name == "zebra"
+
+
+class TestDocument:
+    """Тесты модели Document"""
+
+    def test_create_document(self, db, regular_user, test_category):
+        """Тест создания документа"""
+        document = Document.objects.create(
             title="Тестовый документ",
-            content="Python это язык программирования для разработки приложений",
-            author=self.user,
+            content="Содержимое тестового документа",
+            author=regular_user,
+            category=test_category
         )
 
-    def test_word_match_creation(self):
-        """Тест создания найденного слова"""
-        word_match = WordMatch.objects.create(
-            document=self.document,
-            query="python",
-            matched_word="Python",
-            position=0,
-            context_before="",
-            context_after="это язык программирования",
-            match_type="exact",
-            relevance_score=1.0,
+        assert document.title == "Тестовый документ"
+        assert document.content == "Содержимое тестового документа"
+        assert document.author == regular_user
+        assert document.category == test_category
+        assert document.is_active is True
+        assert document.word_count > 0
+        assert document.created_at is not None
+        assert document.updated_at is not None
+        assert str(document) == "Тестовый документ"
+
+    def test_document_word_count_calculation(self, db, regular_user):
+        """Тест автоматического подсчета слов"""
+        content = "Это тестовый документ с пятью словами"
+        document = Document.objects.create(
+            title="Тест",
+            content=content,
+            author=regular_user
         )
 
-        self.assertEqual(word_match.document, self.document)
-        self.assertEqual(word_match.query, "python")
-        self.assertEqual(word_match.matched_word, "Python")
-        self.assertEqual(word_match.position, 0)
-        self.assertEqual(word_match.match_type, "exact")
-        self.assertEqual(word_match.relevance_score, 1.0)
+        expected_count = len(content.split())
+        assert document.word_count == expected_count
 
-    def test_word_match_str_method(self):
-        """Тест строкового представления найденного слова"""
+    def test_document_word_count_empty_content(self, db, regular_user):
+        """Тест подсчета слов для пустого содержимого"""
+        document = Document.objects.create(
+            title="Пустой документ",
+            content="",
+            author=regular_user
+        )
+
+        assert document.word_count == 0
+
+    def test_document_word_count_whitespace_content(self, db, regular_user):
+        """Тест подсчета слов для содержимого только с пробелами"""
+        document = Document.objects.create(
+            title="Пробелы",
+            content="   \n\t   ",
+            author=regular_user
+        )
+
+        assert document.word_count == 0
+
+    def test_document_without_category(self, db, regular_user):
+        """Тест создания документа без категории"""
+        document = Document.objects.create(
+            title="Без категории",
+            content="Содержимое",
+            author=regular_user
+        )
+
+        assert document.category is None
+
+    def test_document_inactive(self, db, regular_user):
+        """Тест создания неактивного документа"""
+        document = Document.objects.create(
+            title="Неактивный",
+            content="Содержимое",
+            author=regular_user,
+            is_active=False
+        )
+
+        assert document.is_active is False
+
+    def test_document_ordering(self, db, regular_user):
+        """Тест сортировки документов по дате создания"""
+        doc1 = Document.objects.create(
+            title="Первый", content="Содержимое", author=regular_user
+        )
+        doc2 = Document.objects.create(
+            title="Второй", content="Содержимое", author=regular_user
+        )
+
+        documents = list(Document.objects.all())
+        assert documents[0] == doc2  # Новее должен быть первым
+        assert documents[1] == doc1
+
+    def test_document_str_representation(self, test_document):
+        """Тест строкового представления документа"""
+        assert str(test_document) == "Тестовый документ"
+
+
+class TestDocumentTagRelation:
+    """Тесты модели DocumentTagRelation"""
+
+    def test_create_tag_relation(self, db, test_document, test_tag):
+        """Тест создания связи документ-тег"""
+        relation = DocumentTagRelation.objects.create(
+            document=test_document,
+            tag=test_tag
+        )
+
+        assert relation.document == test_document
+        assert relation.tag == test_tag
+        assert relation.created_at is not None
+        assert str(relation) == f"{test_document.title} - {test_tag.name}"
+
+    def test_unique_document_tag_relation(self, db, test_document, test_tag):
+        """Тест уникальности связи документ-тег"""
+        DocumentTagRelation.objects.create(
+            document=test_document,
+            tag=test_tag
+        )
+
+        with pytest.raises(IntegrityError):
+            DocumentTagRelation.objects.create(
+                document=test_document,
+                tag=test_tag
+            )
+
+    def test_multiple_tags_for_document(self, db, test_document):
+        """Тест множественных тегов для одного документа"""
+        tag1 = DocumentTag.objects.create(name="tag1")
+        tag2 = DocumentTag.objects.create(name="tag2")
+
+        DocumentTagRelation.objects.create(document=test_document, tag=tag1)
+        DocumentTagRelation.objects.create(document=test_document, tag=tag2)
+
+        relations = DocumentTagRelation.objects.filter(document=test_document)
+        assert relations.count() == 2
+
+
+class TestWordMatch:
+    """Тесты модели WordMatch"""
+
+    def test_create_word_match(self, db, test_document):
+        """Тест создания совпадения слова"""
         word_match = WordMatch.objects.create(
-            document=self.document,
-            query="программирование",
-            matched_word="программирования",
-            position=20,
+            document=test_document,
+            query="тест",
+            matched_word="тестовый",
+            position=10,
+            context_before="Это ",
+            context_after=" документ",
             match_type="partial",
+            relevance_score=0.8
         )
 
-        expected_str = f"программирования в {self.document.title}"
-        self.assertEqual(str(word_match), expected_str)
+        assert word_match.document == test_document
+        assert word_match.query == "тест"
+        assert word_match.matched_word == "тестовый"
+        assert word_match.position == 10
+        assert word_match.context_before == "Это "
+        assert word_match.context_after == " документ"
+        assert word_match.match_type == "partial"
+        assert word_match.relevance_score == 0.8
+        assert word_match.created_at is not None
 
-    def test_word_match_ordering(self):
-        """Тест сортировки найденных слов"""
-        # Создаем несколько совпадений с разными оценками релевантности
+    def test_word_match_str_representation(self, db, test_document):
+        """Тест строкового представления совпадения"""
+        word_match = WordMatch.objects.create(
+            document=test_document,
+            query="тест",
+            matched_word="тестовый",
+            position=10
+        )
+
+        expected = f"тестовый в {test_document.title}"
+        assert str(word_match) == expected
+
+    def test_word_match_ordering(self, db, test_document):
+        """Тест сортировки совпадений"""
         match1 = WordMatch.objects.create(
-            document=self.document, query="test", matched_word="test1", position=10, relevance_score=0.5
+            document=test_document,
+            query="тест",
+            matched_word="тест1",
+            position=20,
+            relevance_score=0.7
         )
         match2 = WordMatch.objects.create(
-            document=self.document, query="test", matched_word="test2", position=5, relevance_score=1.0
-        )
-        match3 = WordMatch.objects.create(
-            document=self.document, query="test", matched_word="test3", position=15, relevance_score=1.0
+            document=test_document,
+            query="тест",
+            matched_word="тест2",
+            position=10,
+            relevance_score=0.9
         )
 
         matches = list(WordMatch.objects.all())
+        assert matches[0] == match2  # Больше релевантность
+        assert matches[1] == match1
 
-        # Первый должен быть с наивысшей релевантностью и наименьшей позицией
-        self.assertEqual(matches[0], match2)
-        self.assertEqual(matches[1], match3)  # Та же релевантность, но позиция больше
-        self.assertEqual(matches[2], match1)  # Наименьшая релевантность
+    def test_word_match_context_truncation(self, db, test_document):
+        """Тест обрезания контекста при сохранении"""
+        long_context = "x" * 250  # Больше лимита в 200 символов
 
-    def test_word_match_types(self):
-        """Тест разных типов совпадений"""
-        exact_match = WordMatch.objects.create(
-            document=self.document, query="python", matched_word="python", position=0, match_type="exact"
+        word_match = WordMatch.objects.create(
+            document=test_document,
+            query="тест",
+            matched_word="тест",
+            position=10,
+            context_before=long_context,
+            context_after=long_context
         )
 
-        partial_match = WordMatch.objects.create(
-            document=self.document, query="прог", matched_word="программирования", position=20, match_type="partial"
+        assert len(word_match.context_before) == 200
+        assert len(word_match.context_after) == 200
+
+    def test_word_match_choices(self, db, test_document):
+        """Тест валидности выборов типа совпадения"""
+        valid_types = ["exact", "partial", "fuzzy"]
+
+        for match_type in valid_types:
+            word_match = WordMatch.objects.create(
+                document=test_document,
+                query="тест",
+                matched_word="тест",
+                position=10,
+                match_type=match_type
+            )
+            assert word_match.match_type == match_type
+
+
+class TestSearchHistory:
+    """Тесты модели SearchHistory"""
+
+    def test_create_search_history(self, db, test_document, regular_user):
+        """Тест создания истории поиска"""
+        search_history = SearchHistory.objects.create(
+            query="python",
+            document=test_document,
+            user=regular_user,
+            results_count=5,
+            search_time=0.123,
+            ip_address="127.0.0.1"
         )
 
-        fuzzy_match = WordMatch.objects.create(
-            document=self.document,
-            query="питон",
-            matched_word="python",
-            position=0,
-            match_type="fuzzy",
-            relevance_score=0.8,
-        )
+        assert search_history.query == "python"
+        assert search_history.document == test_document
+        assert search_history.user == regular_user
+        assert search_history.results_count == 5
+        assert search_history.search_time == 0.123
+        assert search_history.ip_address == "127.0.0.1"
+        assert search_history.created_at is not None
 
-        self.assertEqual(exact_match.match_type, "exact")
-        self.assertEqual(partial_match.match_type, "partial")
-        self.assertEqual(fuzzy_match.match_type, "fuzzy")
-
-
-class SearchHistoryModelTest(TestCase):
-    """Тесты для модели SearchHistory"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.user = User.objects.create_user(username="searcher", email="searcher@example.com", password="testpass123")
-        self.document = Document.objects.create(
-            title="Тестовый документ", content="Содержимое документа для поиска", author=self.user
-        )
-
-    def test_search_history_creation(self):
-        """Тест создания записи истории поиска"""
-        history = SearchHistory.objects.create(
-            query="python программирование",
-            document=self.document,
-            user=self.user,
-            results_count=15,
-            search_time=0.0234,
-            ip_address="192.168.1.1",
-        )
-
-        self.assertEqual(history.query, "python программирование")
-        self.assertEqual(history.document, self.document)
-        self.assertEqual(history.user, self.user)
-        self.assertEqual(history.results_count, 15)
-        self.assertEqual(history.search_time, 0.0234)
-        self.assertEqual(history.ip_address, "192.168.1.1")
-
-    def test_search_history_str_method(self):
-        """Тест строкового представления истории поиска"""
-        history = SearchHistory.objects.create(query="тестовый запрос", document=self.document, results_count=5)
-
-        expected_str = f"тестовый запрос в {self.document.title} (5 результатов)"
-        self.assertEqual(str(history), expected_str)
-
-    def test_search_history_without_user(self):
+    def test_search_history_without_user(self, db, test_document):
         """Тест создания истории поиска без пользователя"""
-        history = SearchHistory.objects.create(
-            query="анонимный поиск", document=self.document, results_count=3, ip_address="10.0.0.1"
+        search_history = SearchHistory.objects.create(
+            query="anonymous search",
+            document=test_document,
+            results_count=3,
+            search_time=0.05
         )
 
-        self.assertIsNone(history.user)
-        self.assertEqual(history.ip_address, "10.0.0.1")
+        assert search_history.user is None
 
-    def test_search_history_ordering(self):
-        """Тест сортировки истории поиска по дате"""
-        import time
+    def test_search_history_str_representation(self, db, test_document, regular_user):
+        """Тест строкового представления истории поиска"""
+        search_history = SearchHistory.objects.create(
+            query="тест",
+            document=test_document,
+            user=regular_user,
+            results_count=2
+        )
 
-        history1 = SearchHistory.objects.create(query="первый поиск", document=self.document, user=self.user)
+        expected = f"тест в {test_document.title} (2 результатов)"
+        assert str(search_history) == expected
 
-        time.sleep(0.01)  # Небольшая задержка для разных временных меток
-
-        history2 = SearchHistory.objects.create(query="второй поиск", document=self.document, user=self.user)
+    def test_search_history_ordering(self, db, test_document, regular_user):
+        """Тест сортировки истории поиска"""
+        history1 = SearchHistory.objects.create(
+            query="первый",
+            document=test_document,
+            user=regular_user
+        )
+        history2 = SearchHistory.objects.create(
+            query="второй",
+            document=test_document,
+            user=regular_user
+        )
 
         histories = list(SearchHistory.objects.all())
-        # Более поздние записи должны быть первыми
-        self.assertEqual(histories[0], history2)
-        self.assertEqual(histories[1], history1)
+        assert histories[0] == history2  # Новее должен быть первым
+        assert histories[1] == history1
 
-    def test_search_history_ipv6_address(self):
-        """Тест с IPv6 адресом"""
-        history = SearchHistory.objects.create(query="IPv6 тест", document=self.document, ip_address="2001:db8::1")
-
-        self.assertEqual(history.ip_address, "2001:db8::1")
-
-
-class DocumentTagRelationModelTest(TestCase):
-    """Тесты для модели DocumentTagRelation"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-        self.document = Document.objects.create(
-            title="Тестовый документ", content="Содержимое для тестирования тегов", author=self.user
+    def test_search_history_default_values(self, db, test_document):
+        """Тест значений по умолчанию"""
+        search_history = SearchHistory.objects.create(
+            query="тест",
+            document=test_document
         )
-        self.tag = DocumentTag.objects.create(name="test")
 
-    def test_document_tag_relation_creation(self):
-        """Тест создания связи документ-тег"""
-        relation = DocumentTagRelation.objects.create(document=self.document, tag=self.tag)
+        assert search_history.results_count == 0
+        assert search_history.search_time == 0.0
+        assert search_history.ip_address is None
 
-        self.assertEqual(relation.document, self.document)
-        self.assertEqual(relation.tag, self.tag)
-        self.assertIsNotNone(relation.created_at)
 
-    def test_document_tag_relation_str_method(self):
-        """Тест строкового представления связи"""
-        relation = DocumentTagRelation.objects.create(document=self.document, tag=self.tag)
+class TestModelRelationships:
+    """Тесты связей между моделями"""
 
-        expected_str = f"{self.document.title} - {self.tag.name}"
-        self.assertEqual(str(relation), expected_str)
+    def test_document_category_cascade(self, db, test_document, test_category):
+        """Тест каскадного удаления при удалении категории"""
+        category_id = test_category.id
+        document_id = test_document.id
 
-    def test_document_tag_relation_unique_together(self):
-        """Тест уникальности связи документ-тег"""
-        DocumentTagRelation.objects.create(document=self.document, tag=self.tag)
+        # Удаляем категорию
+        test_category.delete()
 
-        with self.assertRaises(IntegrityError):
-            DocumentTagRelation.objects.create(document=self.document, tag=self.tag)
+        # Документ должен остаться, но категория должна быть None
+        document = Document.objects.get(id=document_id)
+        assert document.category is None
 
-    def test_multiple_tags_per_document(self):
-        """Тест добавления нескольких тегов к одному документу"""
-        tag1 = DocumentTag.objects.create(name="python")
-        tag2 = DocumentTag.objects.create(name="programming")
-        tag3 = DocumentTag.objects.create(name="web")
+    def test_document_author_cascade(self, db, test_document, regular_user):
+        """Тест каскадного удаления при удалении автора"""
+        document_id = test_document.id
 
-        DocumentTagRelation.objects.create(document=self.document, tag=tag1)
-        DocumentTagRelation.objects.create(document=self.document, tag=tag2)
-        DocumentTagRelation.objects.create(document=self.document, tag=tag3)
+        # Удаляем автора
+        regular_user.delete()
 
-        # Проверяем, что у документа есть все три тега
-        document_tags = self.document.tag_relations.all()
-        self.assertEqual(document_tags.count(), 3)
+        # Документ должен быть удален
+        assert not Document.objects.filter(id=document_id).exists()
 
-        tag_names = [relation.tag.name for relation in document_tags]
-        self.assertIn("python", tag_names)
-        self.assertIn("programming", tag_names)
-        self.assertIn("web", tag_names)
-
-    def test_multiple_documents_per_tag(self):
-        """Тест добавления одного тега к нескольким документам"""
-        doc1 = Document.objects.create(title="Документ 1", content="Содержимое первого документа", author=self.user)
-        doc2 = Document.objects.create(title="Документ 2", content="Содержимое второго документа", author=self.user)
-
-        python_tag = DocumentTag.objects.create(name="python")
-
-        DocumentTagRelation.objects.create(document=doc1, tag=python_tag)
-        DocumentTagRelation.objects.create(document=doc2, tag=python_tag)
-
-        # Проверяем, что тег связан с двумя документами
-        tag_relations = python_tag.document_relations.all()
-        self.assertEqual(tag_relations.count(), 2)
-
-        document_titles = [relation.document.title for relation in tag_relations]
-        self.assertIn("Документ 1", document_titles)
-        self.assertIn("Документ 2", document_titles)
-
-    def test_cascade_deletion(self):
-        """Тест каскадного удаления"""
-        relation = DocumentTagRelation.objects.create(document=self.document, tag=self.tag)
-
-        # Удаляем документ
-        self.document.delete()
-
-        # Связь должна быть удалена
-        self.assertFalse(DocumentTagRelation.objects.filter(id=relation.id).exists())
-
-        # Создаем новые объекты для тестирования удаления тега
-        new_document = Document.objects.create(title="Новый документ", content="Новое содержимое", author=self.user)
-        new_relation = DocumentTagRelation.objects.create(document=new_document, tag=self.tag)
+    def test_tag_relation_cascade(self, db, test_document_with_tags, test_tag):
+        """Тест каскадного удаления связей при удалении тега"""
+        # Проверяем, что связь существует
+        assert DocumentTagRelation.objects.filter(
+            document=test_document_with_tags,
+            tag=test_tag
+        ).exists()
 
         # Удаляем тег
-        self.tag.delete()
+        test_tag.delete()
 
         # Связь должна быть удалена
-        self.assertFalse(DocumentTagRelation.objects.filter(id=new_relation.id).exists())
+        assert not DocumentTagRelation.objects.filter(
+            document=test_document_with_tags
+        ).exists()
 
-
-class ModelIntegrationTest(TestCase):
-    """Интеграционные тесты моделей"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.user = User.objects.create_user(username="integrationuser", password="testpass123")
-        self.category = DocumentCategory.objects.create(name="Интеграционная категория")
-
-    def test_full_document_workflow(self):
-        """Тест полного рабочего процесса с документом"""
-        # Создаем документ
-        document = Document.objects.create(
-            title="Интеграционный тест",
-            content="Python программирование с алгоритмами поиска",
-            author=self.user,
-            category=self.category,
+    def test_word_match_document_cascade(self, db, test_document):
+        """Тест каскадного удаления совпадений при удалении документа"""
+        word_match = WordMatch.objects.create(
+            document=test_document,
+            query="тест",
+            matched_word="тест",
+            position=10
         )
 
-        # Добавляем теги
-        tag1 = DocumentTag.objects.create(name="python")
-        tag2 = DocumentTag.objects.create(name="алгоритмы")
+        match_id = word_match.id
 
-        DocumentTagRelation.objects.create(document=document, tag=tag1)
-        DocumentTagRelation.objects.create(document=document, tag=tag2)
+        # Удаляем документ
+        test_document.delete()
 
-        # Создаем поиск
-        history = SearchHistory.objects.create(query="python", document=document, user=self.user, results_count=2)
+        # Совпадение должно быть удалено
+        assert not WordMatch.objects.filter(id=match_id).exists()
 
-        # Создаем совпадения
-        WordMatch.objects.create(
-            document=document,
-            query="python",
-            matched_word="Python",
-            position=0,
-            match_type="exact",
-            relevance_score=1.0,
+    def test_search_history_document_cascade(self, db, test_document, regular_user):
+        """Тест каскадного удаления истории при удалении документа"""
+        search_history = SearchHistory.objects.create(
+            query="тест",
+            document=test_document,
+            user=regular_user
         )
 
-        # Проверяем, что все связано правильно
-        self.assertEqual(document.tag_relations.count(), 2)
-        self.assertEqual(SearchHistory.objects.filter(document=document).count(), 1)
-        self.assertEqual(WordMatch.objects.filter(document=document).count(), 1)
+        history_id = search_history.id
 
-        # Проверяем обратные связи
-        self.assertEqual(tag1.document_relations.count(), 1)
-        self.assertEqual(self.category.document_set.count(), 1)
-        self.assertEqual(self.user.document_set.count(), 1)
+        # Удаляем документ
+        test_document.delete()
+
+        # История должна быть удалена
+        assert not SearchHistory.objects.filter(id=history_id).exists()
+
+
+class TestModelIndexes:
+    """Тесты индексов моделей"""
+
+    def test_document_indexes_exist(self, db):
+        """Тест существования индексов для модели Document"""
+        # Проверяем, что индексы определены в Meta
+        meta = Document._meta
+        index_fields = []
+
+        for index in meta.indexes:
+            index_fields.extend(index.fields)
+
+        expected_fields = ['title', 'created_at', 'category', 'author']
+        for field in expected_fields:
+            assert field in index_fields or f'-{field}' in index_fields
+
+    def test_word_match_indexes_exist(self, db):
+        """Тест существования индексов для модели WordMatch"""
+        meta = WordMatch._meta
+        index_fields = []
+
+        for index in meta.indexes:
+            for field in index.fields:
+                index_fields.append(field)
+
+        expected_fields = ['matched_word', 'position']
+        for field in expected_fields:
+            assert field in index_fields
+
+    def test_search_history_indexes_exist(self, db):
+        """Тест существования индексов для модели SearchHistory"""
+        meta = SearchHistory._meta
+        index_fields = []
+
+        for index in meta.indexes:
+            for field in index.fields:
+                index_fields.append(field)
+
+        expected_fields = ['query', 'document', 'created_at', 'user']
+        for field in expected_fields:
+            assert field in index_fields

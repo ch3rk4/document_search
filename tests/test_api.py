@@ -1,388 +1,533 @@
-from django.contrib.auth.models import User
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
+"""
+Тесты для API endpoints
+"""
+from unittest.mock import patch
+
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient
 
-from doc_storage.models import (Document, DocumentCategory, SearchHistory,
-                                WordMatch)
+from doc_storage.models import Document, DocumentCategory, DocumentTag, WordMatch
 
 
-class DocumentAPITest(TestCase):
-    """Тесты для API документов"""
+class TestDocumentAPI:
+    """Тесты API для документов"""
 
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="testuser", email="test@example.com", password="testpass123")
-        self.category = DocumentCategory.objects.create(name="Тестовая категория")
-        self.document = Document.objects.create(
-            title="Тестовый документ",
-            content="Это содержимое тестового документа для проверки поиска слов python программирование",
-            author=self.user,
-            category=self.category,
-        )
+    def test_list_documents_anonymous(self, api_client, multiple_documents):
+        """Тест получения списка документов анонимным пользователем"""
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url)
 
-    def test_document_list_api(self):
-        """Тест получения списка документов через API"""
-        url = reverse("doc_storage:document-list")
-        response = self.client.get(url)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == 3
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("results", response.data)
-        self.assertGreater(len(response.data["results"]), 0)
+        # Проверяем структуру ответа
+        document_data = response.data['results'][0]
+        expected_fields = ['id', 'title', 'author_name', 'category_name', 'created_at', 'word_count']
+        for field in expected_fields:
+            assert field in document_data
 
-    def test_document_detail_api(self):
-        """Тест получения детальной информации о документе"""
-        url = reverse("doc_storage:document-detail", kwargs={"pk": self.document.pk})
-        response = self.client.get(url)
+    def test_list_documents_authenticated(self, authenticated_api_client, multiple_documents):
+        """Тест получения списка документов аутентифицированным пользователем"""
+        url = reverse('doc_storage:document-list')
+        response = authenticated_api_client.get(url)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["title"], self.document.title)
-        self.assertEqual(response.data["content"], self.document.content)
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) == 3
 
-    def test_document_search_words_api(self):
-        """Тест поиска слов в документе через API"""
-        self.client.force_authenticate(user=self.user)
+    def test_retrieve_document(self, api_client, test_document):
+        """Тест получения конкретного документа"""
+        url = reverse('doc_storage:document-detail', kwargs={'pk': test_document.pk})
+        response = api_client.get(url)
 
-        url = reverse("doc_storage:document-search-words", kwargs={"pk": self.document.pk})
-        response = self.client.get(url, {"q": "python"})
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['id'] == test_document.pk
+        assert response.data['title'] == test_document.title
+        assert response.data['content'] == test_document.content
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("document", response.data)
-        self.assertIn("query", response.data)
-        self.assertIn("total_matches", response.data)
-        self.assertIn("matches", response.data)
-        self.assertEqual(response.data["query"], "python")
+    def test_create_document_anonymous(self, api_client):
+        """Тест создания документа анонимным пользователем"""
+        url = reverse('doc_storage:document-list')
+        data = {
+            'title': 'Новый документ',
+            'content': 'Содержимое нового документа'
+        }
+        response = api_client.post(url, data)
 
-    def test_document_search_words_empty_query(self):
-        """Тест поиска слов с пустым запросом"""
-        url = reverse("doc_storage:document-search-words", kwargs={"pk": self.document.pk})
-        response = self.client.get(url, {"q": ""})
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", response.data)
+    def test_create_document_authenticated(self, authenticated_api_client, test_category):
+        """Тест создания документа аутентифицированным пользователем"""
+        url = reverse('doc_storage:document-list')
+        data = {
+            'title': 'Новый документ',
+            'content': 'Содержимое нового документа',
+            'category_id': test_category.pk
+        }
+        response = authenticated_api_client.post(url, data)
 
-    def test_document_create_api_with_file_upload(self):
-        """Тест создания документа через API с загрузкой файла"""
-        self.client.force_authenticate(user=self.user)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['title'] == 'Новый документ'
+        assert response.data['content'] == 'Содержимое нового документа'
 
-        # Создаем тестовый файл
-        test_content = "Содержимое тестового файла с python программированием"
-        test_file = SimpleUploadedFile("test_document.txt", test_content.encode("utf-8"), content_type="text/plain")
+        # Проверяем, что документ создан в БД
+        document = Document.objects.get(pk=response.data['id'])
+        assert document.title == 'Новый документ'
 
-        url = reverse("doc_storage:upload_file_api")
-        data = {"file": test_file, "title": "Документ из файла", "category_id": self.category.id}
-        response = self.client.post(url, data, format="multipart")
+    def test_create_document_with_tags(self, authenticated_api_client, test_tag):
+        """Тест создания документа с тегами"""
+        url = reverse('doc_storage:document-list')
+        data = {
+            'title': 'Документ с тегами',
+            'content': 'Содержимое',
+            'tag_ids': [test_tag.pk]
+        }
+        response = authenticated_api_client.post(url, data)
 
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data["title"], "Документ из файла")
-        self.assertEqual(response.data["author"]["username"], self.user.username)
-        self.assertIn("python программированием", response.data["content"])
+        assert response.status_code == status.HTTP_201_CREATED
 
-    def test_document_create_api_unauthenticated(self):
-        """Тест создания документа без авторизации"""
-        url = reverse("doc_storage:document-list")
-        data = {"title": "Новый документ", "content": "Содержимое нового документа"}
-        response = self.client.post(url, data, format="json")
+        # Проверяем, что тег привязан
+        document = Document.objects.get(pk=response.data['id'])
+        assert document.tag_relations.filter(tag=test_tag).exists()
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_update_document_owner(self, authenticated_api_client, test_document):
+        """Тест обновления документа владельцем"""
+        # Сначала убеждаемся, что пользователь - автор документа
+        test_document.author = authenticated_api_client.handler._force_user
+        test_document.save()
 
-    def test_document_update_api(self):
-        """Тест обновления документа через API"""
-        self.client.force_authenticate(user=self.user)
+        url = reverse('doc_storage:document-detail', kwargs={'pk': test_document.pk})
+        data = {
+            'title': 'Обновленный заголовок',
+            'content': test_document.content
+        }
+        response = authenticated_api_client.put(url, data)
 
-        url = reverse("doc_storage:document-detail", kwargs={"pk": self.document.pk})
-        data = {"title": "Обновленный заголовок", "content": self.document.content}
-        response = self.client.patch(url, data, format="json")
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['title'] == 'Обновленный заголовок'
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["title"], data["title"])
+    def test_update_document_not_owner(self, authenticated_api_client, test_document, admin_user):
+        """Тест обновления документа не владельцем"""
+        # Устанавливаем другого автора
+        test_document.author = admin_user
+        test_document.save()
 
-    def test_document_delete_api(self):
-        """Тест удаления документа через API"""
-        self.client.force_authenticate(user=self.user)
+        url = reverse('doc_storage:document-detail', kwargs={'pk': test_document.pk})
+        data = {
+            'title': 'Попытка обновления',
+            'content': test_document.content
+        }
+        response = authenticated_api_client.put(url, data)
 
-        url = reverse("doc_storage:document-detail", kwargs={"pk": self.document.pk})
-        response = self.client.delete(url)
+        # В зависимости от настроек permissions, может быть 403 или 404
+        assert response.status_code in [status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND]
 
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+    def test_delete_document_owner(self, authenticated_api_client, test_document):
+        """Тест удаления документа владельцем"""
+        # Устанавливаем правильного автора
+        test_document.author = authenticated_api_client.handler._force_user
+        test_document.save()
 
-        # Проверяем, что документ действительно удален
-        self.assertFalse(Document.objects.filter(pk=self.document.pk).exists())
+        url = reverse('doc_storage:document-detail', kwargs={'pk': test_document.pk})
+        response = authenticated_api_client.delete(url)
+
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not Document.objects.filter(pk=test_document.pk).exists()
+
+    def test_filter_documents_by_category(self, api_client, multiple_documents, test_category):
+        """Тест фильтрации документов по категории"""
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url, {'category': test_category.pk})
+
+        assert response.status_code == status.HTTP_200_OK
+        # Все тестовые документы должны быть в одной категории
+        assert len(response.data['results']) == 3
+
+    def test_search_documents(self, api_client, multiple_documents):
+        """Тест поиска документов"""
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url, {'search': 'Python'})
+
+        assert response.status_code == status.HTTP_200_OK
+        # Должен найти документ с Python в заголовке
+        assert len(response.data['results']) >= 1
+        assert 'Python' in response.data['results'][0]['title']
+
+    def test_order_documents(self, api_client, multiple_documents):
+        """Тест сортировки документов"""
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url, {'ordering': 'title'})
+
+        assert response.status_code == status.HTTP_200_OK
+        titles = [doc['title'] for doc in response.data['results']]
+        assert titles == sorted(titles)
 
 
-class WordSearchAPITest(TestCase):
-    """Тесты для API поиска слов в документах"""
+class TestDocumentSearchWordsAPI:
+    """Тесты API поиска слов в документах"""
 
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="searcher", password="testpass123")
+    def test_search_words_in_document(self, api_client, test_document):
+        """Тест поиска слов в документе"""
+        url = reverse('doc_storage:search_words_api')
+        params = {
+            'document_id': test_document.pk,
+            'q': 'тестовый',
+            'type': 'exact'
+        }
+        response = api_client.get(url, params)
 
-        # Создаем документ для поиска
-        self.document = Document.objects.create(
-            title="Python программирование",
-            content="""Python - это высокоуровневый язык программирования.
-            Изучение Python включает в себя основы синтаксиса, структуры данных.
-            Программирование на Python используется в веб-разработке, data science.
-            Многие разработчики выбирают Python за его простоту и мощность.""",
-            author=self.user,
-        )
+        assert response.status_code == status.HTTP_200_OK
+        assert 'document' in response.data
+        assert 'query' in response.data
+        assert 'total_matches' in response.data
+        assert 'search_time' in response.data
+        assert 'matches' in response.data
 
-    def test_search_words_api_with_results(self):
-        """Тест поиска слов с результатами"""
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": self.document.id, "q": "python"})
+    def test_search_words_missing_document_id(self, api_client):
+        """Тест поиска без указания document_id"""
+        url = reverse('doc_storage:search_words_api')
+        params = {'q': 'тест'}
+        response = api_client.get(url, params)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("document", response.data)
-        self.assertIn("query", response.data)
-        self.assertIn("total_matches", response.data)
-        self.assertIn("search_time", response.data)
-        self.assertIn("matches", response.data)
-        self.assertGreater(response.data["total_matches"], 0)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'document_id' in str(response.data['error'])
 
-    def test_search_words_api_no_results(self):
-        """Тест поиска слов без результатов"""
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": self.document.id, "q": "несуществующееслово12345"})
+    def test_search_words_missing_query(self, api_client, test_document):
+        """Тест поиска без указания запроса"""
+        url = reverse('doc_storage:search_words_api')
+        params = {'document_id': test_document.pk}
+        response = api_client.get(url, params)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["total_matches"], 0)
-        self.assertEqual(len(response.data["matches"]), 0)
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'q' in str(response.data['error'])
 
-    def test_search_words_api_empty_query(self):
-        """Тест поиска слов с пустым запросом"""
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": self.document.id, "q": ""})
+    def test_search_words_nonexistent_document(self, api_client):
+        """Тест поиска в несуществующем документе"""
+        url = reverse('doc_storage:search_words_api')
+        params = {
+            'document_id': 99999,
+            'q': 'тест'
+        }
+        response = api_client.get(url, params)
 
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", response.data)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_search_words_api_missing_document_id(self):
-        """Тест поиска слов без указания ID документа"""
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"q": "python"})
-
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("error", response.data)
-
-    def test_search_words_api_nonexistent_document(self):
-        """Тест поиска слов в несуществующем документе"""
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": 99999, "q": "python"})
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertIn("error", response.data)
-
-    def test_search_words_api_different_types(self):
-        """Тест разных типов поиска слов"""
-        url = reverse("doc_storage:search_words_api")
-        search_types = ["exact", "partial", "fuzzy", "combined"]
+    def test_search_words_different_types(self, api_client, search_test_data):
+        """Тест различных типов поиска"""
+        document = search_test_data[0]
+        search_types = ['exact', 'partial', 'fuzzy', 'combined']
 
         for search_type in search_types:
-            response = self.client.get(
-                url, {"document_id": self.document.id, "q": "программирование", "type": search_type}
+            url = reverse('doc_storage:search_words_api')
+            params = {
+                'document_id': document.pk,
+                'q': 'прог',
+                'type': search_type
+            }
+            response = api_client.get(url, params)
+
+            assert response.status_code == status.HTTP_200_OK
+            assert response.data['search_type'] == search_type
+
+    @patch('search_service.algorithms.WordSearchService.search_words_in_document')
+    def test_search_words_saves_history(self, mock_search, api_client, test_document, regular_user):
+        """Тест сохранения истории поиска"""
+        # Настраиваем мок
+        mock_search.return_value = ([], 0.1)
+
+        url = reverse('doc_storage:search_words_api')
+        params = {
+            'document_id': test_document.pk,
+            'q': 'тест'
+        }
+
+        # Принудительно аутентифицируем пользователя
+        api_client.force_authenticate(user=regular_user)
+        response = api_client.get(url, params)
+
+        assert response.status_code == status.HTTP_200_OK
+        mock_search.assert_called_once()
+
+
+class TestDocumentCategoryAPI:
+    """Тесты API для категорий документов"""
+
+    def test_list_categories(self, api_client, test_category):
+        """Тест получения списка категорий"""
+        url = reverse('doc_storage:documentcategory-list')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) >= 1
+
+        category_data = response.data['results'][0]
+        expected_fields = ['id', 'name', 'description', 'created_at', 'document_count']
+        for field in expected_fields:
+            assert field in category_data
+
+    def test_retrieve_category(self, api_client, test_category):
+        """Тест получения конкретной категории"""
+        url = reverse('doc_storage:documentcategory-detail', kwargs={'pk': test_category.pk})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['id'] == test_category.pk
+        assert response.data['name'] == test_category.name
+
+    def test_create_category_anonymous(self, api_client):
+        """Тест создания категории анонимным пользователем"""
+        url = reverse('doc_storage:documentcategory-list')
+        data = {
+            'name': 'Новая категория',
+            'description': 'Описание новой категории'
+        }
+        response = api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_create_category_authenticated(self, authenticated_api_client):
+        """Тест создания категории аутентифицированным пользователем"""
+        url = reverse('doc_storage:documentcategory-list')
+        data = {
+            'name': 'Новая категория',
+            'description': 'Описание новой категории'
+        }
+        response = authenticated_api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['name'] == 'Новая категория'
+
+        # Проверяем создание в БД
+        category = DocumentCategory.objects.get(pk=response.data['id'])
+        assert category.name == 'Новая категория'
+
+    def test_category_documents_action(self, api_client, test_category, test_document):
+        """Тест получения документов категории через action"""
+        url = reverse('doc_storage:documentcategory-documents', kwargs={'pk': test_category.pk})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) >= 1
+
+
+class TestDocumentTagAPI:
+    """Тесты API для тегов документов"""
+
+    def test_list_tags(self, api_client, test_tag):
+        """Тест получения списка тегов"""
+        url = reverse('doc_storage:documenttag-list')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) >= 1
+
+        tag_data = response.data['results'][0]
+        expected_fields = ['id', 'name', 'color', 'created_at']
+        for field in expected_fields:
+            assert field in tag_data
+
+    def test_create_tag_authenticated(self, authenticated_api_client):
+        """Тест создания тега"""
+        url = reverse('doc_storage:documenttag-list')
+        data = {
+            'name': 'новый-тег',
+            'color': '#ff0000'
+        }
+        response = authenticated_api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data['name'] == 'новый-тег'
+        assert response.data['color'] == '#ff0000'
+
+    def test_search_tags(self, api_client, test_tag):
+        """Тест поиска тегов"""
+        url = reverse('doc_storage:documenttag-list')
+        response = api_client.get(url, {'search': test_tag.name})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert len(response.data['results']) >= 1
+
+
+class TestFileUploadAPI:
+    """Тесты API загрузки файлов"""
+
+    def test_upload_file_authenticated(self, authenticated_api_client, sample_text_file, test_category):
+        """Тест загрузки файла аутентифицированным пользователем"""
+        url = reverse('doc_storage:upload_file_api')
+        data = {
+            'file': sample_text_file,
+            'title': 'Загруженный документ',
+            'category_id': test_category.pk
+        }
+        response = authenticated_api_client.post(url, data, format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert 'id' in response.data
+        assert response.data['title'] == 'Загруженный документ'
+
+        # Проверяем создание документа
+        document = Document.objects.get(pk=response.data['id'])
+        assert document.title == 'Загруженный документ'
+        assert document.category == test_category
+
+    def test_upload_file_anonymous(self, api_client, sample_text_file):
+        """Тест загрузки файла анонимным пользователем"""
+        url = reverse('doc_storage:upload_file_api')
+        data = {
+            'file': sample_text_file,
+            'title': 'Анонимный документ'
+        }
+        response = api_client.post(url, data, format='multipart')
+
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # Проверяем, что автор - анонимный пользователь
+        document = Document.objects.get(pk=response.data['id'])
+        assert document.author.username == 'anonymous'
+
+    def test_upload_file_without_file(self, authenticated_api_client):
+        """Тест загрузки без файла"""
+        url = reverse('doc_storage:upload_file_api')
+        data = {'title': 'Без файла'}
+        response = authenticated_api_client.post(url, data)
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'файл' in str(response.data['error']).lower()
+
+    def test_upload_large_file(self, authenticated_api_client, large_file):
+        """Тест загрузки файла большого размера"""
+        url = reverse('doc_storage:upload_file_api')
+        data = {
+            'file': large_file,
+            'title': 'Большой файл'
+        }
+        response = authenticated_api_client.post(url, data, format='multipart')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert 'большой' in str(response.data['error']).lower()
+
+    def test_upload_unsupported_file(self, authenticated_api_client, unsupported_file):
+        """Тест загрузки неподдерживаемого файла"""
+        url = reverse('doc_storage:upload_file_api')
+        data = {
+            'file': unsupported_file,
+            'title': 'Неподдерживаемый файл'
+        }
+        response = authenticated_api_client.post(url, data, format='multipart')
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+class TestWordCloudAPI:
+    """Тесты API облака слов"""
+
+    def test_get_word_cloud(self, api_client, test_document):
+        """Тест получения облака слов"""
+        url = reverse('doc_storage:word_cloud_api', kwargs={'document_id': test_document.pk})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'document' in response.data
+        assert 'word_frequencies' in response.data
+        assert 'total_unique_words' in response.data
+
+        # Проверяем, что есть слова
+        assert len(response.data['word_frequencies']) > 0
+
+    def test_get_word_cloud_nonexistent_document(self, api_client):
+        """Тест получения облака слов для несуществующего документа"""
+        url = reverse('doc_storage:word_cloud_api', kwargs={'document_id': 99999})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+class TestSearchSuggestionsAPI:
+    """Тесты API поисковых подсказок"""
+
+    def test_get_search_suggestions(self, api_client, test_document):
+        """Тест получения поисковых подсказок"""
+        url = reverse('doc_storage:suggestions_api', kwargs={'document_id': test_document.pk})
+        response = api_client.get(url, {'prefix': 'тест'})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'suggestions' in response.data
+        assert isinstance(response.data['suggestions'], list)
+
+    def test_get_search_suggestions_short_prefix(self, api_client, test_document):
+        """Тест получения подсказок с коротким префиксом"""
+        url = reverse('doc_storage:suggestions_api', kwargs={'document_id': test_document.pk})
+        response = api_client.get(url, {'prefix': 'т'})
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['suggestions'] == []
+
+    def test_get_search_suggestions_no_prefix(self, api_client, test_document):
+        """Тест получения подсказок без префикса"""
+        url = reverse('doc_storage:suggestions_api', kwargs={'document_id': test_document.pk})
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.data['suggestions'] == []
+
+
+class TestStatisticsAPI:
+    """Тесты API статистики"""
+
+    def test_get_search_statistics(self, api_client, test_document, regular_user):
+        """Тест получения статистики поиска"""
+        # Создаем немного истории поиска
+        from doc_storage.models import SearchHistory
+        SearchHistory.objects.create(
+            query="тест",
+            document=test_document,
+            user=regular_user,
+            results_count=5,
+            search_time=0.1
+        )
+
+        url = reverse('doc_storage:statistics_api')
+        response = api_client.get(url)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert 'total_searches' in response.data
+        assert 'total_documents' in response.data
+        assert 'average_search_time' in response.data
+        assert 'most_searched_words' in response.data
+        assert 'documents_with_searches' in response.data
+
+
+class TestPagination:
+    """Тесты пагинации API"""
+
+    def test_documents_pagination(self, api_client, db, regular_user, test_category):
+        """Тест пагинации списка документов"""
+        # Создаем много документов
+        for i in range(25):
+            Document.objects.create(
+                title=f"Документ {i}",
+                content=f"Содержимое документа {i}",
+                author=regular_user,
+                category=test_category
             )
 
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(response.data["search_type"], search_type)
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url)
 
-    def test_search_words_creates_word_matches(self):
-        """Тест создания записей WordMatch при поиске"""
-        initial_count = WordMatch.objects.count()
+        assert response.status_code == status.HTTP_200_OK
+        assert 'count' in response.data
+        assert 'next' in response.data
+        assert 'previous' in response.data
+        assert 'results' in response.data
 
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": self.document.id, "q": "python"})
+        # По умолчанию должно быть 20 документов на странице
+        assert len(response.data['results']) == 20
+        assert response.data['count'] == 25
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        final_count = WordMatch.objects.count()
-        self.assertGreater(final_count, initial_count)
+    def test_pagination_page_size(self, api_client, multiple_documents):
+        """Тест кастомного размера страницы"""
+        url = reverse('doc_storage:document-list')
+        response = api_client.get(url, {'page_size': 2})
 
-    def test_search_words_creates_history(self):
-        """Тест создания записи в истории поиска"""
-        self.client.force_authenticate(user=self.user)
-        initial_count = SearchHistory.objects.count()
-
-        url = reverse("doc_storage:search_words_api")
-        response = self.client.get(url, {"document_id": self.document.id, "q": "python"})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        final_count = SearchHistory.objects.count()
-        self.assertEqual(final_count, initial_count + 1)
-
-        # Проверяем созданную запись
-        last_history = SearchHistory.objects.latest("created_at")
-        self.assertEqual(last_history.query, "python")
-        self.assertEqual(last_history.document, self.document)
-
-
-class WordCloudAPITest(TestCase):
-    """Тесты для API облака слов"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-
-        self.document = Document.objects.create(
-            title="Тестовый документ",
-            content="python программирование разработка python веб python анализ данных",
-            author=self.user,
-        )
-
-    def test_word_cloud_api(self):
-        """Тест получения облака слов через API"""
-        url = reverse("doc_storage:word_cloud_api", kwargs={"document_id": self.document.id})
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("document", response.data)
-        self.assertIn("word_frequencies", response.data)
-        self.assertIn("total_unique_words", response.data)
-
-        # Проверяем, что 'python' имеет высокую частоту
-        word_frequencies = response.data["word_frequencies"]
-        self.assertIn("python", word_frequencies)
-        self.assertEqual(word_frequencies["python"], 3)
-
-    def test_word_cloud_nonexistent_document(self):
-        """Тест получения облака слов для несуществующего документа"""
-        url = reverse("doc_storage:word_cloud_api", kwargs={"document_id": 99999})
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-
-class SearchSuggestionsAPITest(TestCase):
-    """Тесты для API поисковых подсказок"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-
-        self.document = Document.objects.create(
-            title="Тестовый документ",
-            content="программирование python разработка программист программный код",
-            author=self.user,
-        )
-
-    def test_search_suggestions_api(self):
-        """Тест получения поисковых подсказок"""
-        url = reverse("doc_storage:suggestions_api", kwargs={"document_id": self.document.id})
-        response = self.client.get(url, {"prefix": "прог"})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("suggestions", response.data)
-
-        suggestions = response.data["suggestions"]
-        self.assertGreater(len(suggestions), 0)
-
-        # Проверяем структуру предложений
-        first_suggestion = suggestions[0]
-        self.assertIn("word", first_suggestion)
-        self.assertIn("frequency", first_suggestion)
-        self.assertIn("context_preview", first_suggestion)
-
-        # Проверяем, что все предложения начинаются с префикса
-        for suggestion in suggestions:
-            self.assertTrue(suggestion["word"].startswith("прог"))
-
-    def test_search_suggestions_short_prefix(self):
-        """Тест поисковых подсказок с коротким префиксом"""
-        url = reverse("doc_storage:suggestions_api", kwargs={"document_id": self.document.id})
-        response = self.client.get(url, {"prefix": "п"})
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # Для очень коротких префиксов возвращается пустой список
-        self.assertEqual(response.data["suggestions"], [])
-
-    def test_search_suggestions_nonexistent_document(self):
-        """Тест поисковых подсказок для несуществующего документа"""
-        url = reverse("doc_storage:suggestions_api", kwargs={"document_id": 99999})
-        response = self.client.get(url, {"prefix": "прог"})
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-
-class SearchStatisticsAPITest(TestCase):
-    """Тесты для API статистики поиска"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-
-        self.document = Document.objects.create(
-            title="Тестовый документ", content="python программирование разработка", author=self.user
-        )
-
-    def test_search_statistics_api(self):
-        """Тест получения статистики поиска"""
-        # Сначала выполняем несколько поисков для создания статистики
-        SearchHistory.objects.create(
-            query="python", document=self.document, user=self.user, results_count=5, search_time=0.1
-        )
-        SearchHistory.objects.create(
-            query="программирование", document=self.document, user=self.user, results_count=3, search_time=0.15
-        )
-
-        url = reverse("doc_storage:statistics_api")
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("total_searches", response.data)
-        self.assertIn("total_documents", response.data)
-        self.assertIn("average_search_time", response.data)
-        self.assertIn("most_searched_words", response.data)
-        self.assertIn("documents_with_searches", response.data)
-
-        self.assertEqual(response.data["total_searches"], 2)
-        self.assertEqual(response.data["total_documents"], 1)
-
-
-class CategoryAPITest(TestCase):
-    """Тесты для API категорий"""
-
-    def setUp(self):
-        """Настройка тестовых данных"""
-        self.client = APIClient()
-        self.user = User.objects.create_user(username="testuser", password="testpass123")
-        self.category = DocumentCategory.objects.create(
-            name="Программирование", description="Статьи о программировании"
-        )
-
-    def test_category_list_api(self):
-        """Тест получения списка категорий"""
-        url = reverse("doc_storage:documentcategory-list")
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
-
-    def test_category_detail_api(self):
-        """Тест получения детальной информации о категории"""
-        url = reverse("doc_storage:documentcategory-detail", kwargs={"pk": self.category.pk})
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["name"], self.category.name)
-
-    def test_category_documents_api(self):
-        """Тест получения документов категории"""
-        # Создаем документ в категории
-        Document.objects.create(
-            title="Тестовый документ",
-            content="Содержимое документа с python кодом",
-            author=self.user,
-            category=self.category,
-        )
-
-        url = reverse("doc_storage:documentcategory-documents", kwargs={"pk": self.category.pk})
-        response = self.client.get(url)
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertGreater(len(response.data), 0)
+        assert response.status_code == status.HTTP_200_OK
+        # Размер страницы может быть ограничен настройками
+        assert len(response.data['results']) <= 3

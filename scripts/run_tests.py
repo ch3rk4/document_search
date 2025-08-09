@@ -66,7 +66,7 @@ def run_specific_tests():
     print("\n2. Только тесты моделей:")
     print("   python run_tests.py tests/test_models.py")
     print("\n3. Только тесты алгоритмов:")
-    print("   python run_tests.py tests/test_algorithms.py")
+    print("   python run_tests.py tests/test_search_algorithms.py")
     print("\n4. Только тесты API:")
     print("   python run_tests.py tests/test_api.py")
     print("\n5. Тесты с маркером 'unit':")
