@@ -3,8 +3,8 @@
 Скрипт для запуска тестов с правильной конфигурацией
 """
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -82,7 +82,7 @@ def run_specific_tests():
 def main():
     """Основная функция"""
     if len(sys.argv) > 1:
-        if sys.argv[1] in ['--help', '-h', 'help']:
+        if sys.argv[1] in ["--help", "-h", "help"]:
             run_specific_tests()
             return 0
         else:
