@@ -1,15 +1,12 @@
 """
 Тесты для форм приложения
 """
-import pytest
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from doc_storage.auth_forms import UserLoginForm, UserProfileForm, UserRegistrationForm
 from doc_storage.forms import (
     DocumentCreateForm, DocumentEditForm, DocumentUploadForm, FileReplaceForm
 )
-from doc_storage.models import Document, DocumentCategory, DocumentTag
 
 
 class TestUserRegistrationForm:

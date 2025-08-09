@@ -3,9 +3,7 @@
 """
 from unittest.mock import MagicMock, patch
 
-import pytest
 from django.contrib.admin.sites import AdminSite
-from django.contrib.auth.models import User
 from django.test import RequestFactory
 from django.urls import reverse
 

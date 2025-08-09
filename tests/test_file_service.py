@@ -5,11 +5,9 @@ import tempfile
 from pathlib import Path
 from unittest.mock import patch, mock_open, MagicMock
 
-import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from doc_storage.file_service import FileTextExtractor, DocumentFileService
-from doc_storage.models import Document
 
 
 class TestFileTextExtractor:

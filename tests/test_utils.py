@@ -2,11 +2,8 @@
 Тесты для утилит и дополнительных компонентов
 """
 import pytest
-from unittest.mock import patch, MagicMock
-from django.core.management import call_command
-from django.core.management.base import CommandError
+from unittest.mock import patch
 from django.test import override_settings
-from io import StringIO
 
 
 class TestModelMethods:

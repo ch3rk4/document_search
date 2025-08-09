@@ -2,22 +2,31 @@
 Конфигурация и фикстуры для тестов
 """
 import os
+import sys
 import tempfile
 from io import BytesIO
 from pathlib import Path
 
+# Добавляем src в Python path
+src_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src')
+sys.path.insert(0, src_path)
+
+# Настройка Django до импорта моделей
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'document_search.test_settings')
+
+import django
+django.setup()
+
 import pytest
-from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 
-from doc_storage.models import Document, DocumentCategory, DocumentTag, DocumentTagRelation
-
 
 @pytest.fixture(scope="session")
-def django_db_setup():
-    """Настройка тестовой базы данных"""
-    pass
+def django_db_setup(django_db_blocker):
+    """Настройка тестовой базы данных — применяем миграции с разблокировкой доступа"""
+    with django_db_blocker.unblock():
+        call_command('migrate', verbosity=0, interactive=False)
 
 
 @pytest.fixture
@@ -29,6 +38,7 @@ def client():
 @pytest.fixture
 def admin_user(db):
     """Создание администратора для тестов"""
+    from django.contrib.auth.models import User
     return User.objects.create_superuser(
         username="admin_test",
         email="admin@test.com",
@@ -41,6 +51,7 @@ def admin_user(db):
 @pytest.fixture
 def regular_user(db):
     """Создание обычного пользователя для тестов"""
+    from django.contrib.auth.models import User
     return User.objects.create_user(
         username="user_test",
         email="user@test.com",
@@ -53,6 +64,7 @@ def regular_user(db):
 @pytest.fixture
 def anonymous_user(db):
     """Получение анонимного пользователя"""
+    from django.contrib.auth.models import User
     user, created = User.objects.get_or_create(
         username="anonymous",
         defaults={
@@ -69,6 +81,7 @@ def anonymous_user(db):
 @pytest.fixture
 def test_category(db):
     """Создание тестовой категории"""
+    from doc_storage.models import DocumentCategory
     return DocumentCategory.objects.create(
         name="Тестовая категория",
         description="Категория для тестирования"
@@ -78,6 +91,7 @@ def test_category(db):
 @pytest.fixture
 def test_tag(db):
     """Создание тестового тега"""
+    from doc_storage.models import DocumentTag
     return DocumentTag.objects.create(
         name="тест",
         color="#ff0000"
@@ -87,6 +101,7 @@ def test_tag(db):
 @pytest.fixture
 def test_document(db, regular_user, test_category):
     """Создание тестового документа"""
+    from doc_storage.models import Document
     return Document.objects.create(
         title="Тестовый документ",
         content="Это тестовый документ с различными словами для проверки поиска. "
@@ -100,6 +115,7 @@ def test_document(db, regular_user, test_category):
 @pytest.fixture
 def test_document_with_tags(db, test_document, test_tag):
     """Тестовый документ с тегами"""
+    from doc_storage.models import DocumentTagRelation
     DocumentTagRelation.objects.create(document=test_document, tag=test_tag)
     return test_document
 
@@ -107,6 +123,7 @@ def test_document_with_tags(db, test_document, test_tag):
 @pytest.fixture
 def multiple_documents(db, regular_user, admin_user, test_category):
     """Создание нескольких тестовых документов"""
+    from doc_storage.models import Document
     documents = []
 
     # Документ 1
@@ -234,6 +251,7 @@ def temp_media_root(settings):
 def search_test_data(db, regular_user, test_category):
     """Данные для тестирования поиска"""
     # Создаем документы с различным содержимым для тестирования поиска
+    from doc_storage.models import Document
     doc1 = Document.objects.create(
         title="Программирование на Python",
         content="Python это высокоуровневый язык программирования. "
@@ -255,9 +273,9 @@ def search_test_data(db, regular_user, test_category):
     return [doc1, doc2]
 
 
+import pytest
+
 @pytest.fixture(autouse=True)
 def enable_db_access_for_all_tests(db):
-    """
-    Автоматически включить доступ к БД для всех тестов
-    """
+    """Автоматически включает доступ к базе данных для всех тестов."""
     pass
